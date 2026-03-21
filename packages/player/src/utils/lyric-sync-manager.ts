@@ -62,16 +62,7 @@ const INCREMENTAL_THRESHOLD = 200;
 
 const TTML_LOG_TAG = chalk.bgHex("#FF5577").hex("#FFFFFF")(" TTML DB ");
 
-const PROXY_HOST = "https://amll-cors-proxy.vercel.app";
-const PROXY_API_ENDPOINT = `${PROXY_HOST}/api/proxy`;
-const GITHUB_RELEASE_BASE =
-	"https://github.com/Steve-xmh/amll-ttml-db/releases/download/db-latest";
-
 const MIRROR_BASE = "https://amlldb.bikonoo.com";
-
-const getProxiedUrl = (targetUrl: string): string => {
-	return `${PROXY_API_ENDPOINT}?url=${encodeURIComponent(targetUrl)}`;
-};
 
 const getMirrorIndexUrl = (): string => {
 	return `${MIRROR_BASE}/metadata/raw-lyrics-index.jsonl`;
@@ -124,7 +115,7 @@ export async function syncLyricsDatabase(store: Store): Promise<SyncResult> {
 			}
 
 			try {
-				const versionUrl = getProxiedUrl(`${GITHUB_RELEASE_BASE}/version.json`);
+				const versionUrl = `${MIRROR_BASE}/raw-lyrics/version.json`;
 				const versionRes = await fetch(versionUrl, { cache: "no-cache" });
 				if (!versionRes.ok)
 					throw new Error(`版本检查失败: ${versionRes.status}`);
@@ -173,7 +164,7 @@ async function performFullSync(
 	store: Store,
 	commit: string,
 ): Promise<SyncResult> {
-	const zipUrl = getProxiedUrl(`${GITHUB_RELEASE_BASE}/raw-lyrics.zip`);
+	const zipUrl = `${MIRROR_BASE}/raw-lyrics/raw-lyrics.zip`;
 
 	const res = await fetch(zipUrl);
 	if (!res.ok) throw new Error(`下载zip失败: ${res.status}`);
@@ -315,14 +306,3 @@ async function performIncrementalSync(
 		error: "所有文件都下载失败了",
 	};
 }
-
-// export async function simulateDataLoss(store: Store) {
-// 	const allKeys = (await db.ttmlDB.toCollection().keys()) as string[];
-// 	if (allKeys.length <= 10) return;
-// 	const shuffled = allKeys.sort(() => 0.5 - Math.random());
-// 	const toDelete = shuffled.slice(0, 10);
-// 	console.log(toDelete);
-// 	await db.ttmlDB.bulkDelete(toDelete);
-// 	const DEBUG_VERISON = "__debug_ver";
-// 	store.set(lyricDBVersionAtom, DEBUG_VERISON);
-// }
