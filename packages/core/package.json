@@ -57,7 +57,7 @@
 		"typescript": "catalog:",
 		"vite": "catalog:",
 		"vite-plugin-dts": "catalog:",
-		"vite-plugin-glsl": "^1.5.5",
+		"vite-plugin-glsl": "^1.5.6",
 		"vite-plugin-top-level-await": "^1.6.0",
 		"vite-plugin-wasm": "catalog:"
 	},
@@ -72,7 +72,7 @@
 	},
 	"dependencies": {
 		"@ungap/structured-clone": "catalog:",
-		"bezier-easing": "^2.1.0",
+		"bezier-easing": "^3.0.0",
 		"deep-freeze": "^0.0.1",
 		"gl-matrix": "4.0.0-beta.2"
 	}
