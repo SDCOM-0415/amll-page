@@ -13,10 +13,10 @@ import {
 	parseYrc,
 	type LyricLine as RawLyricLine,
 } from "@applemusic-like-lyrics/lyric";
+import type { LyricLine as TTMLLyricLine } from "@applemusic-like-lyrics/ttml";
+import { parseTTML } from "@applemusic-like-lyrics/ttml";
 import GUI from "lil-gui";
 import Stats from "stats.js";
-import { parseTTML } from "../../ttml/src/parser.ts";
-import type { LyricLine as TTMLLyricLine } from "../../ttml/src/ttml-types.ts";
 import type { LyricLine } from ".";
 import {
 	BackgroundRender,
