@@ -198,21 +198,38 @@ export const Component: FC = () => {
 				.join("");
 			const songId = `url-${hashHex.substring(0, 16)}`;
 
+			let coverBlob = new Blob([], { type: "image/png" });
+			if (songData.pic) {
+				try {
+					const { loadFileFromURL } = await import("../../utils/url-params.ts");
+					coverBlob = await loadFileFromURL(songData.pic);
+				} catch (e) {
+					console.warn("加载 Meting 歌曲封面失败", e);
+				}
+			}
+
 			const now = Date.now();
+			const emptyBlob = new Blob([], { type: "audio/mpeg" });
 			const song: Song = {
 				id: songId,
 				filePath: songData.url,
 				songName: songData.title || "Unknown Title",
 				songArtists: songData.author || "Unknown Artist",
 				songAlbum: "Unknown Album",
-				cover: new Blob([], { type: "image/png" }),
-				file: new Blob([], { type: "audio/mpeg" }),
+				cover: coverBlob,
+				file: emptyBlob,
 				duration: 0,
-				lyricFormat: "lrc",
+				lyricFormat: songData.lrc ? "lrc" : "",
 				lyric: songData.lrc || "",
 				addTime: now,
 				accessTime: now,
 			};
+
+			// 将音频的远程 URL 存入 tempAudioStore，以便在播放时使用
+			const { tempAudioStore } = await import(
+				"../../states/tempAudioStore.ts"
+			);
+			tempAudioStore.set(songId, songData.url);
 
 			await db.songs.put(song);
 

@@ -85,7 +85,21 @@ export const NewPlaylistButton: FC = () => {
 
 					// 使用空白Blob作为占位，因为实际播放时URLParamsHandler或者引擎应该支持URL
 					const emptyBlob = new Blob([], { type: "audio/mpeg" });
-					const coverBlob = new Blob([], { type: "image/png" });
+
+					let coverBlob = new Blob([], { type: "image/png" });
+					if (songData.pic) {
+						try {
+							coverBlob = await loadFileFromURL(songData.pic);
+						} catch (e) {
+							console.warn("加载 Meting 歌曲封面失败", e);
+						}
+					}
+
+					// 将音频的远程 URL 存入 tempAudioStore，以便在播放时使用
+					const { tempAudioStore } = await import(
+						"../../states/tempAudioStore.ts"
+					);
+					tempAudioStore.set(songId, songData.url);
 
 					// 仅作基本信息的保存
 					validSongs.push({
@@ -97,7 +111,7 @@ export const NewPlaylistButton: FC = () => {
 						cover: coverBlob,
 						file: emptyBlob,
 						duration: 0, // Meting API doesn't always provide duration in list
-						lyricFormat: "lrc",
+						lyricFormat: songData.lrc ? "lrc" : "",
 						lyric: songData.lrc || "",
 						addTime: now,
 						accessTime: now,
