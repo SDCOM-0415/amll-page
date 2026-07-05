@@ -13,8 +13,8 @@
 		]
 	},
 	"scripts": {
-		"build": "npx --no-install wasm-pack build --release || echo 'Skipping wasm-pack build'",
-		"build:dev": "npx --no-install wasm-pack build --dev || echo 'Skipping wasm-pack build'",
+		"build": "wasm-pack build --release",
+		"build:dev": "wasm-pack build --dev",
 		"fmt": "cargo fmt"
 	},
 	"files": [
@@ -22,5 +22,8 @@
 		"pkg/*.js",
 		"pkg/*.d.ts"
 	],
-	"types": "pkg/ttml_processor.d.ts"
+	"types": "pkg/ttml_processor.d.ts",
+	"dependencies": {
+		"wasm-pack": "^0.15.0"
+	}
 }
