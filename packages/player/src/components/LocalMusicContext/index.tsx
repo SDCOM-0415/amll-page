@@ -362,6 +362,11 @@ export const LocalMusicContext: FC = () => {
 				tempUrl = song.filePath;
 			}
 
+			// 处理 meting api 的 url 自动补全
+			if (tempUrl && tempUrl.startsWith("//")) {
+				tempUrl = `https:${tempUrl}`;
+			}
+
 			if (!song || (!(song.file instanceof Blob && song.file.size > 0) && !tempUrl)) {
 				toast.error("无法播放，找不到歌曲文件或网络地址。");
 				return;

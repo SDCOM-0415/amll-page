@@ -168,12 +168,7 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 			await this.initAudioContext();
 
 			// 直接发起 GET 请求，避免 HEAD 请求由于后端没有正确支持而报错或不带 Content-Length
-			let response = await fetch(url).catch(e => {
-				// 如果默认 fetch 失败，可能需要尝试跨域无 cors 的配置去嗅探错误。
-				// 但如果服务端限制死了，只能抛出错误交由上层 UI 提示。
-				throw e;
-			});
-
+			const response = await fetch(url);
 			if (!response.ok) {
 				throw new Error(`Failed to fetch media: ${response.statusText}`);
 			}
@@ -270,9 +265,6 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 
 		try {
 			const safeStartOffset = Math.floor(startOffset);
-			// Some APIs or CDNs might block range requests completely, or they just stream progressively.
-			// Try standard fetch first, without restrictive Range or CORS "omit" if it fails.
-			
 			// In this case, since cross-origin fetch for media could be strict, 
 			// we will NOT force the Range header if startOffset is 0. 
 			// If we do seek later, we will use it.
@@ -287,7 +279,6 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 			}
 
 			let response = await fetch(url, fetchOptions).catch(async (e) => {
-				// 如果因为 CORS 问题（导致 fetch 直接 throw Error 而不是返回 response）抛出异常
 				console.warn("[Player] Fetch failed (possibly CORS or Range issue), trying fallback...", e);
 				if (safeStartOffset > 0) {
 					return await fetch(url, { signal });
