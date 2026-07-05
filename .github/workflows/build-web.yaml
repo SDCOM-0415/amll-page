@@ -44,7 +44,7 @@ jobs:
           cache: pnpm
 
       - name: 安装依赖
-        run: pnpm i --frozen-lockfile --ignore-scripts
+        run: pnpm i --no-frozen-lockfile --ignore-scripts
 
       - name: 运行代码检查
         run: |
@@ -86,7 +86,7 @@ jobs:
           version: "v0.13.1"
 
       - name: 安装依赖
-        run: pnpm i --frozen-lockfile --ignore-scripts
+        run: pnpm i --no-frozen-lockfile --ignore-scripts
 
       - name: 构建库
         run: pnpm build:libs
