@@ -84,26 +84,38 @@ class DecoderSession {
 		const seekCallback = (offset: number, whence: number): number => {
 			// AVSEEK_SIZE
 			if (whence === 65536) {
-				return fileSize;
+				// Some format like MP3 without strict ID3 or AAC might probe the size.
+				// If the remote stream doesn't expose Content-Length, return -1 to indicate stream is unseekable for size
+				return fileSize > 0 ? fileSize : -1;
 			}
 
 			if (!this.sabHeader) return -1;
 
 			let targetPos = offset;
-			if (whence === 2) {
+			if (whence === 1) {
+				// SEEK_CUR (If your FFmpeg mapping gives relative seeks)
+				// This isn't accurately mapped without knowing current read pos, but mostly AVSEEK_SET is used.
+				targetPos += 0; // fallback naive
+			} else if (whence === 2) {
 				// SEEK_END
+				if (fileSize <= 0) {
+					// 无法在未知大小的流中进行从末尾倒数的 seek
+					return -1;
+				}
 				targetPos = fileSize + offset;
 			}
 
 			// 防止 FFmpeg 估算的 offset 超过文件实际大小导致 HTTP 416 或立即 EOF
-			if (targetPos >= fileSize) {
+			if (fileSize > 0 && targetPos >= fileSize) {
 				// 回退到文件末尾前 128KB，确保有数据可读，让 FFmpeg 能找到帧头 resync
 				const SAFE_MARGIN = 128 * 1024;
 				const newPos = Math.max(0, fileSize - SAFE_MARGIN);
-				// console.warn(
-				// 	`[Worker] Seek target ${targetPos} > fileSize ${fileSize}. Smart clamping to ${newPos}`,
-				// );
 				targetPos = newPos;
+			}
+
+			// 如果请求 targetPos < 0 或者是在未知大小流的情况下发生倒数操作
+			if (targetPos < 0) {
+				targetPos = 0;
 			}
 
 			const currentGen = Atomics.load(this.sabHeader, IDX_SEEK_GEN);

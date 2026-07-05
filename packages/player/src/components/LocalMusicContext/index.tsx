@@ -322,6 +322,7 @@ export const LocalMusicContext: FC = () => {
 							});
 							await audioPlayer.load(file);
 						} else if (tempUrl) {
+							console.log("[LocalMusicContext] Load external URL inside restorePlaybackState:", tempUrl);
 							await audioPlayer.loadSrc(tempUrl);
 						}
 
@@ -410,6 +411,7 @@ export const LocalMusicContext: FC = () => {
 				});
 				await audioPlayer.load(file);
 			} else if (tempUrl) {
+				console.log("[LocalMusicContext] Load external URL inside playSongByIndex:", tempUrl);
 				await audioPlayer.loadSrc(tempUrl);
 			}
 

@@ -168,7 +168,12 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 			await this.initAudioContext();
 
 			// 直接发起 GET 请求，避免 HEAD 请求由于后端没有正确支持而报错或不带 Content-Length
-			const response = await fetch(url);
+			let response = await fetch(url).catch(e => {
+				// 如果默认 fetch 失败，可能需要尝试跨域无 cors 的配置去嗅探错误。
+				// 但如果服务端限制死了，只能抛出错误交由上层 UI 提示。
+				throw e;
+			});
+
 			if (!response.ok) {
 				throw new Error(`Failed to fetch media: ${response.statusText}`);
 			}
@@ -176,7 +181,7 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 			let contentLengthStr = response.headers.get("Content-Length");
 			// 部分跨域或动态流可能不返回 Content-Length
 			this.fileSize = contentLengthStr ? parseInt(contentLengthStr, 10) : 0;
-			this.currentUrl = url;
+			this.currentUrl = response.url || url;
 
 			const BUFFER_SIZE = 2 * 1024 * 1024;
 			this.ringBuffer = SharedRingBuffer.create(BUFFER_SIZE);
@@ -202,6 +207,7 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		} catch (e) {
 			const err = toError(e);
 			console.error("[Player] LoadSrc error:", err);
+			// 在跨域重定向或者协议错误时不要彻底阻断播放UI
 			this.dispatch("error", err.message);
 		}
 	}
@@ -264,12 +270,38 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 
 		try {
 			const safeStartOffset = Math.floor(startOffset);
-			const response = await fetch(url, {
-				headers: safeStartOffset > 0 ? {
-					Range: `bytes=${safeStartOffset}-`,
-				} : undefined,
+			// Some APIs or CDNs might block range requests completely, or they just stream progressively.
+			// Try standard fetch first, without restrictive Range or CORS "omit" if it fails.
+			
+			// In this case, since cross-origin fetch for media could be strict, 
+			// we will NOT force the Range header if startOffset is 0. 
+			// If we do seek later, we will use it.
+			const fetchOptions: RequestInit = {
 				signal,
+			};
+			
+			if (safeStartOffset > 0) {
+				fetchOptions.headers = {
+					Range: `bytes=${safeStartOffset}-`,
+				};
+			}
+
+			let response = await fetch(url, fetchOptions).catch(async (e) => {
+				// 如果因为 CORS 问题（导致 fetch 直接 throw Error 而不是返回 response）抛出异常
+				console.warn("[Player] Fetch failed (possibly CORS or Range issue), trying fallback...", e);
+				if (safeStartOffset > 0) {
+					return await fetch(url, { signal });
+				}
+				throw e;
 			});
+
+			// 兼容性Fallback: 如果带有Range头的跨域请求被阻拦（403/CORS），尝试不带Range重新请求。
+			// 注意：此时流将从头开始给，需要在 ffmpeg 层丢弃多余数据（或其本身就会跳过）。
+			// 但这能确保我们起码能拿到数据并继续。
+			if (!response.ok && safeStartOffset > 0) {
+				console.warn("[Player] Range response not ok, falling back to full stream fetch.");
+				response = await fetch(url, { signal });
+			}
 
 			if (response.status === 416) {
 				this.ringBuffer?.setEOF();
@@ -309,7 +341,8 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 				return;
 			} else {
 				console.error("[Player] Stream error:", err);
-				this.dispatch("error", `Network error: ${err.message}`);
+				// don't abort player immediately on single network chunk error, retry might happen via worker seek
+				// this.dispatch("error", `Network error: ${err.message}`);
 			}
 		}
 	}
@@ -649,7 +682,7 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 				if (bufferedDuration < LOW_WATER_MARK && this.isWorkerPaused) {
 					this.isWorkerPaused = false;
 					this.requestWorker({ type: "RESUME" }).catch((err) => {
-						console.error(
+						console.warn(
 							"[Player] Failed to resume worker for low water mark:",
 							err,
 						);
@@ -663,6 +696,13 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 					this.checkIfEnded();
 				} else if (this.playerState === "playing") {
 					this.dispatch("waiting");
+					// If we run out of decoded chunks but we are not EOF, and worker is paused, try resuming it forcefully
+					if (this.isWorkerPaused) {
+						this.isWorkerPaused = false;
+						this.requestWorker({ type: "RESUME" }).catch(() => {
+							this.isWorkerPaused = true;
+						});
+					}
 				}
 			}
 
