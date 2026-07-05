@@ -69,6 +69,10 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		}
 	>();
 
+	private fallbackAudio: HTMLAudioElement | null = null;
+	private isFallbackMode = false;
+	private fallbackTimeUpdateId: number = 0;
+
 	constructor() {
 		super();
 		this.worker = new FFmpegWorker();
@@ -78,9 +82,15 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		return this.playerState;
 	}
 	public get duration() {
+		if (this.isFallbackMode && this.fallbackAudio) {
+			return this.fallbackAudio.duration || 0;
+		}
 		return this.metadata?.duration || 0;
 	}
 	public get currentTime() {
+		if (this.isFallbackMode && this.fallbackAudio) {
+			return this.fallbackAudio.currentTime || 0;
+		}
 		if (!this.audioCtx) return 0;
 		const wallDelta = this.audioCtx.currentTime - this.anchorWallTime;
 		const currentPosition =
@@ -164,6 +174,12 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		const sessionId = this.bumpSession();
 		this.dispatch("loadstart");
 
+		if (typeof SharedArrayBuffer === "undefined") {
+			console.warn("[Player] SharedArrayBuffer not available, using HTMLAudioElement fallback");
+			await this.loadSrcFallback(url);
+			return;
+		}
+
 		try {
 			await this.initAudioContext();
 
@@ -204,6 +220,64 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 			console.error("[Player] LoadSrc error:", err);
 			// 在跨域重定向或者协议错误时不要彻底阻断播放UI
 			this.dispatch("error", err.message);
+		}
+	}
+
+	private async loadSrcFallback(url: string) {
+		this.isFallbackMode = true;
+		this.fallbackAudio = new Audio();
+		this.fallbackAudio.crossOrigin = "anonymous";
+		this.fallbackAudio.preload = "auto";
+		this.fallbackAudio.volume = this.targetVolume;
+
+		const ready = new Promise<void>((resolve, reject) => {
+			const onMeta = () => {
+				cleanup();
+				this.dispatch("durationchange", this.fallbackAudio!.duration);
+				this.dispatch("loadedmetadata");
+				this.dispatch("canplay");
+				resolve();
+			};
+			const onError = () => {
+				cleanup();
+				const msg = this.fallbackAudio?.error?.message || "HTMLAudioElement error";
+				this.dispatch("error", msg);
+				reject(new Error(msg));
+			};
+			const cleanup = () => {
+				this.fallbackAudio?.removeEventListener("loadedmetadata", onMeta);
+				this.fallbackAudio?.removeEventListener("error", onError);
+			};
+			this.fallbackAudio!.addEventListener("loadedmetadata", onMeta);
+			this.fallbackAudio!.addEventListener("error", onError);
+		});
+
+		this.fallbackAudio.addEventListener("ended", () => {
+			this.stopFallbackTimeUpdate();
+			this.dispatch("ended");
+		});
+
+		this.fallbackAudio.src = url;
+		this.fallbackAudio.load();
+
+		await ready;
+	}
+
+	private startFallbackTimeUpdate() {
+		this.stopFallbackTimeUpdate();
+		const tick = () => {
+			if (this.isFallbackMode && this.fallbackAudio && this.playerState === "playing") {
+				this.dispatch("timeupdate", this.fallbackAudio.currentTime);
+				this.fallbackTimeUpdateId = requestAnimationFrame(tick);
+			}
+		};
+		this.fallbackTimeUpdateId = requestAnimationFrame(tick);
+	}
+
+	private stopFallbackTimeUpdate() {
+		if (this.fallbackTimeUpdateId) {
+			cancelAnimationFrame(this.fallbackTimeUpdateId);
+			this.fallbackTimeUpdateId = 0;
 		}
 	}
 
@@ -339,6 +413,14 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 	}
 
 	public async play() {
+		if (this.isFallbackMode && this.fallbackAudio) {
+			this.dispatch("play");
+			await this.fallbackAudio.play();
+			this.dispatch("playing");
+			this.startFallbackTimeUpdate();
+			return;
+		}
+
 		if (!this.audioCtx || !this.masterGain) return;
 
 		this.dispatch("play");
@@ -359,6 +441,13 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 	}
 
 	public async pause() {
+		if (this.isFallbackMode && this.fallbackAudio) {
+			this.dispatch("pause");
+			this.fallbackAudio.pause();
+			this.stopFallbackTimeUpdate();
+			return;
+		}
+
 		if (!this.audioCtx || !this.masterGain) return;
 
 		this.dispatch("pause");
@@ -385,6 +474,14 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 	 * @returns 如果跳转操作完成，包括淡入淡出完成，则 resolve
 	 */
 	public async seek(time: number, immediate = false) {
+		if (this.isFallbackMode && this.fallbackAudio) {
+			this.dispatch("seeking");
+			this.fallbackAudio.currentTime = time;
+			this.dispatch("seeked");
+			this.dispatch("timeupdate", time);
+			return;
+		}
+
 		if (!this.worker || !this.audioCtx || !this.metadata || !this.masterGain)
 			return;
 
@@ -420,7 +517,9 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 	public setVolume(val: number) {
 		this.targetVolume = Math.max(0, Math.min(1, val));
 
-		if (this.masterGain && this.playerState === "playing" && this.audioCtx) {
+		if (this.isFallbackMode && this.fallbackAudio) {
+			this.fallbackAudio.volume = this.targetVolume;
+		} else if (this.masterGain && this.playerState === "playing" && this.audioCtx) {
 			this.rampGain(this.targetVolume, 0.05);
 		}
 
@@ -789,6 +888,16 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 	private reset() {
 		this.bumpSession();
 		this.stopTimeUpdate();
+		this.stopFallbackTimeUpdate();
+
+		if (this.fallbackAudio) {
+			this.fallbackAudio.pause();
+			this.fallbackAudio.removeAttribute("src");
+			this.fallbackAudio.load();
+			this.fallbackAudio = null;
+		}
+		this.isFallbackMode = false;
+
 		this.audioCtx?.suspend();
 		this.stopActiveSources();
 		this.activeSources = [];
