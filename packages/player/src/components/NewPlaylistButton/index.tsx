@@ -11,6 +11,7 @@ export const NewPlaylistButton: FC = () => {
 	const [name, setName] = useState("");
 	const [server, setServer] = useState("netease");
 	const [playlistId, setPlaylistId] = useState("");
+	const [apiUrl, setApiUrl] = useState("https://api.meting.icu/api");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	
 	const { t } = useTranslation();
@@ -35,7 +36,9 @@ export const NewPlaylistButton: FC = () => {
 			setIsSubmitting(true);
 			const id = toast.loading(t("page.playlist.new.meting.loading", "正在获取歌单信息..."));
 			try {
-				const metingApiUrl = `https://api.meting.icu/api?server=${server}&type=playlist&id=${playlistId.trim()}`;
+				const baseUrl = apiUrl.trim() || "https://api.meting.icu/api";
+				const separator = baseUrl.includes("?") ? "&" : "?";
+				const metingApiUrl = `${baseUrl}${separator}server=${server}&type=playlist&id=${playlistId.trim()}`;
 				const response = await fetch(metingApiUrl);
 				if (!response.ok) {
 					throw new Error(`获取歌单失败: ${response.status}`);
@@ -181,6 +184,15 @@ export const NewPlaylistButton: FC = () => {
 								placeholder={t("newPlaylist.dialog.namePlaceholderOptional", "留空将使用默认名称")}
 								value={name}
 								onChange={(e) => setName(e.currentTarget.value)}
+							/>
+
+							<Text mt="2">
+								<Trans i18nKey="newPlaylist.dialog.apiUrl">Meting API 地址</Trans>
+							</Text>
+							<TextField.Root
+								placeholder="https://api.meting.icu/api"
+								value={apiUrl}
+								onChange={(e) => setApiUrl(e.currentTarget.value)}
 							/>
 						</>
 					)}

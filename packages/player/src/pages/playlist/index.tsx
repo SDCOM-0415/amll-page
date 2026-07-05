@@ -147,15 +147,21 @@ export const Component: FC = () => {
 	const playSongByIndex = useAtomValue(onRequestPlaySongByIndexAtom).onEmit;
 
 	const onAddMetingMusic = useCallback(async () => {
+		const apiUrl = prompt(t("page.playlist.addMeting.apiUrl", "请输入 Meting API 地址 (留空使用默认)"), "https://api.meting.icu/api");
+		if (apiUrl === null) return;
+		
 		const server = prompt(t("page.playlist.addMeting.server", "请输入平台 (netease/tencent/kugou/bilibili)"), "netease");
 		if (!server) return;
+		
 		const id = prompt(t("page.playlist.addMeting.id", "请输入歌曲 ID"));
 		if (!id) return;
 
 		const toastId = toast.loading(t("page.playlist.addMeting.loading", "正在获取并解析 Meting 歌曲..."));
 
 		try {
-			const metingApiUrl = `https://api.meting.icu/api?server=${server}&type=song&id=${id}`;
+			const baseUrl = apiUrl.trim() || "https://api.meting.icu/api";
+			const separator = baseUrl.includes("?") ? "&" : "?";
+			const metingApiUrl = `${baseUrl}${separator}server=${server}&type=song&id=${id}`;
 			const response = await fetch(metingApiUrl);
 			if (!response.ok) {
 				throw new Error(`请求失败: ${response.status}`);
