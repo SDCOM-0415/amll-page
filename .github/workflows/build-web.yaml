@@ -88,6 +88,9 @@ jobs:
       - name: 安装依赖
         run: pnpm i --no-frozen-lockfile --ignore-scripts
 
+      - name: 预加载 wasm-pack 二进制文件
+        run: npx wasm-pack --version
+
       - name: 构建库
         run: pnpm build:libs
         env:
