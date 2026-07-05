@@ -167,16 +167,15 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		try {
 			await this.initAudioContext();
 
-			const response = await fetch(url, { method: "HEAD" });
+			// 直接发起 GET 请求，避免 HEAD 请求由于后端没有正确支持而报错或不带 Content-Length
+			const response = await fetch(url);
 			if (!response.ok) {
-				throw new Error(`Failed to fetch metadata: ${response.statusText}`);
-			}
-			const contentLength = response.headers.get("Content-Length");
-			if (!contentLength) {
-				throw new Error("Content-Length header is missing");
+				throw new Error(`Failed to fetch media: ${response.statusText}`);
 			}
 
-			this.fileSize = parseInt(contentLength, 10);
+			let contentLengthStr = response.headers.get("Content-Length");
+			// 部分跨域或动态流可能不返回 Content-Length
+			this.fileSize = contentLengthStr ? parseInt(contentLengthStr, 10) : 0;
 			this.currentUrl = url;
 
 			const BUFFER_SIZE = 2 * 1024 * 1024;
@@ -197,12 +196,51 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 				sessionId,
 			});
 
-			this.runFetchLoop(url, 0, this.fileSize);
+			// 已经拿到了第一个 response，直接读取，不用重新 fetch range，以防跨域限制 Range
+			this.runFetchLoopFromResponse(response, this.fileSize);
 			await initWorkerPromise;
 		} catch (e) {
 			const err = toError(e);
 			console.error("[Player] LoadSrc error:", err);
 			this.dispatch("error", err.message);
+		}
+	}
+
+	private async runFetchLoopFromResponse(response: Response, totalSize: number) {
+		if (this.fetchController) {
+			this.fetchController.abort();
+		}
+		this.fetchController = new AbortController();
+		const signal = this.fetchController.signal;
+
+		try {
+			if (!response.body) throw new Error("Response body is null");
+
+			const reader = response.body.getReader();
+			this.notifyWorkerSeek();
+
+			while (true) {
+				const { done, value } = await reader.read();
+
+				if (done) {
+					this.ringBuffer?.setEOF();
+					break;
+				}
+
+				if (value && this.ringBuffer) {
+					await this.ringBuffer.write(value);
+				}
+
+				if (signal.aborted) break;
+			}
+		} catch (e) {
+			const err = toError(e);
+			if (err.name === "AbortError") {
+				return;
+			} else {
+				console.error("[Player] Stream error:", err);
+				this.dispatch("error", `Network error: ${err.message}`);
+			}
 		}
 	}
 
@@ -217,7 +255,8 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		this.fetchController = new AbortController();
 		const signal = this.fetchController.signal;
 
-		if (startOffset >= totalSize) {
+		// 如果不知道文件总大小(动态流)，就不判断 startOffset >= totalSize
+		if (totalSize > 0 && startOffset >= totalSize) {
 			this.ringBuffer?.setEOF();
 			this.notifyWorkerSeek();
 			return;
@@ -226,9 +265,9 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		try {
 			const safeStartOffset = Math.floor(startOffset);
 			const response = await fetch(url, {
-				headers: {
+				headers: safeStartOffset > 0 ? {
 					Range: `bytes=${safeStartOffset}-`,
-				},
+				} : undefined,
 				signal,
 			});
 

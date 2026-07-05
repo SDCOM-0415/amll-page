@@ -279,12 +279,13 @@ export const LocalMusicContext: FC = () => {
 		const restorePlaybackState = async () => {
 			if (savedMusicId) {
 				const song = await db.songs.get(savedMusicId);
-				if (song && song.file instanceof Blob && song.file.size > 0) {
-					try {
-						const file = new File([song.file], song.filePath, {
-							type: song.file.type,
-						});
+				let tempUrl = tempAudioStore.get(savedMusicId);
+				if (!tempUrl && song?.filePath && song.filePath.startsWith("http")) {
+					tempUrl = song.filePath;
+				}
 
+				if (song && ((song.file instanceof Blob && song.file.size > 0) || tempUrl)) {
+					try {
 						store.set(musicNameAtom, song.songName);
 						store.set(
 							musicArtistsAtom,
@@ -315,7 +316,14 @@ export const LocalMusicContext: FC = () => {
 
 						audioPlayer.addEventListener("canplay", handleCanPlayAndSeek);
 
-						await audioPlayer.load(file);
+						if (song.file instanceof Blob && song.file.size > 0) {
+							const file = new File([song.file], song.filePath, {
+								type: song.file.type,
+							});
+							await audioPlayer.load(file);
+						} else if (tempUrl) {
+							await audioPlayer.loadSrc(tempUrl);
+						}
 
 						store.set(musicPlayingAtom, false);
 					} catch (e) {
@@ -347,15 +355,19 @@ export const LocalMusicContext: FC = () => {
 			const songId = queue[targetIndex];
 			const song = await db.songs.get(songId);
 
-			const tempUrl = tempAudioStore.get(songId);
+			let tempUrl = tempAudioStore.get(songId);
+			// 如果内存中的 tempAudioStore 丢失（比如刷新了页面），尝试从 song.filePath (保存的 url) 恢复
+			if (!tempUrl && song?.filePath && song.filePath.startsWith("http")) {
+				tempUrl = song.filePath;
+			}
 
-			if (!song || (!(song.file instanceof Blob) && !tempUrl)) {
-				toast.error("无法播放，找不到歌曲文件。");
+			if (!song || (!(song.file instanceof Blob && song.file.size > 0) && !tempUrl)) {
+				toast.error("无法播放，找不到歌曲文件或网络地址。");
 				return;
 			}
 
 			try {
-				if (song.file instanceof Blob) {
+				if (song.file instanceof Blob && song.file.size > 0) {
 					const { metadata } = await extractMusicMetadata(song.file);
 					const qualityState = mapMetadataToQuality(metadata);
 					store.set(musicQualityAtom, qualityState);
@@ -390,8 +402,6 @@ export const LocalMusicContext: FC = () => {
 			}
 
 			store.set(musicIdAtom, song.id);
-			store.set(currentMusicIndexAtom, targetIndex);
-
 			store.set(currentMusicIndexAtom, targetIndex);
 
 			if (song.file instanceof Blob && song.file.size > 0) {
