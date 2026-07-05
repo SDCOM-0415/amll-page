@@ -22,6 +22,7 @@ import { extractMusicMetadata } from "../../utils/music-file.ts";
 import { mapMetadataToQuality } from "../../utils/quality.ts";
 import {
 	hasURLParams,
+	hasMetingParams,
 	loadFileFromURL,
 	parseURLParams,
 } from "../../utils/url-params.ts";
@@ -74,7 +75,7 @@ export const URLParamsHandler: FC = () => {
 	useEffect(() => {
 		// 只处理一次
 		if (processedRef.current) return;
-		if (!hasURLParams()) return;
+		if (!hasURLParams() && !hasMetingParams()) return;
 
 		processedRef.current = true;
 
@@ -82,16 +83,50 @@ export const URLParamsHandler: FC = () => {
 			try {
 				const params = parseURLParams();
 
+				let musicUrl = params.music;
+				let lyricUrl = params.lyric;
+				let coverUrl = params.cover;
+				let songName = params.title || "Unknown Title";
+				let songArtists = params.artist || "Unknown Artist";
+
+				// 如果是Meting-Api的参数
+				if (params.server && params.type && params.id && params.api) {
+					try {
+						toast.info("正在从Meting API获取歌曲信息...");
+						const metingApiUrl = `${params.api}?server=${params.server}&type=${params.type}&id=${params.id}`;
+						const response = await fetch(metingApiUrl);
+						if (response.ok) {
+							const data = await response.json();
+							if (data && data.length > 0) {
+								const songData = data[0];
+								musicUrl = songData.url;
+								lyricUrl = songData.lrc;
+								coverUrl = songData.pic;
+								songName = songData.title || songName;
+								songArtists = songData.author || songArtists;
+							} else {
+								throw new Error("Meting API 返回数据为空");
+							}
+						} else {
+							throw new Error(`Meting API 请求失败: ${response.status}`);
+						}
+					} catch (e) {
+						console.error("Meting API获取失败", e);
+						toast.error("Meting API获取失败");
+						return;
+					}
+				}
+
 				// 必须有音乐链接
-				if (!params.music) {
-					console.warn("URL参数中缺少music参数");
+				if (!musicUrl) {
+					console.warn("URL参数中缺少music参数或无法从Meting获取");
 					return;
 				}
 
 				// 生成歌曲ID（基于音乐URL的hash）
 				const musicUrlHash = await crypto.subtle.digest(
 					"SHA-256",
-					new TextEncoder().encode(params.music),
+					new TextEncoder().encode(musicUrl),
 				);
 				const hashArray = Array.from(new Uint8Array(musicUrlHash));
 				const hashHex = hashArray
@@ -101,13 +136,13 @@ export const URLParamsHandler: FC = () => {
 
 				// 加载音乐文件
 				toast.info("正在加载音乐文件...");
-				const musicBlob = await loadFileFromURL(params.music);
+				const musicBlob = await loadFileFromURL(musicUrl);
 
 				// 加载封面文件（如果有）
 				let coverBlob = new Blob([], { type: "image/png" });
-				if (params.cover) {
+				if (coverUrl) {
 					try {
-						coverBlob = await loadFileFromURL(params.cover);
+						coverBlob = await loadFileFromURL(coverUrl);
 					} catch (e) {
 						console.warn("加载封面失败", e);
 					}
@@ -116,19 +151,17 @@ export const URLParamsHandler: FC = () => {
 				// 加载歌词文件（如果有）
 				let lyricContent = "";
 				let lyricFormat = "none";
-				if (params.lyric) {
+				if (lyricUrl) {
 					try {
-						const lyricBlob = await loadFileFromURL(params.lyric);
+						const lyricBlob = await loadFileFromURL(lyricUrl);
 						lyricContent = await lyricBlob.text();
-						lyricFormat = detectLyricFormat(params.lyric, lyricContent);
+						lyricFormat = detectLyricFormat(lyricUrl, lyricContent);
 					} catch (e) {
 						console.warn("加载歌词失败", e);
 					}
 				}
 
 				// 提取音乐元数据
-				let songName = params.title || "Unknown Title";
-				let songArtists = params.artist || "Unknown Artist";
 				let songAlbum = "Unknown Album";
 				let finalCover = coverBlob;
 				let finalDuration = 0;
@@ -138,10 +171,10 @@ export const URLParamsHandler: FC = () => {
 				try {
 					const extractedMetadata = await extractMusicMetadata(musicBlob);
 
-					if (!params.title && extractedMetadata.title) {
+					if (!params.title && !params.server && extractedMetadata.title) {
 						songName = extractedMetadata.title;
 					}
-					if (!params.artist && extractedMetadata.artist) {
+					if (!params.artist && !params.server && extractedMetadata.artist) {
 						songArtists = extractedMetadata.artist;
 					}
 					if (extractedMetadata.album) {
@@ -160,7 +193,7 @@ export const URLParamsHandler: FC = () => {
 				}
 
 				// 如果URL参数中有歌词，使用URL参数中的歌词
-				if (params.lyric && lyricContent) {
+				if (lyricUrl && lyricContent) {
 					// 使用从URL加载的歌词
 				} else if (extractedLyric) {
 					// 使用从音乐文件提取的歌词
@@ -172,7 +205,7 @@ export const URLParamsHandler: FC = () => {
 				const now = Date.now();
 				const song: Song = {
 					id: songId,
-					filePath: params.music,
+					filePath: musicUrl,
 					songName,
 					songArtists,
 					songAlbum,
@@ -228,7 +261,7 @@ export const URLParamsHandler: FC = () => {
 				// 加载并播放音乐
 				const file = new File(
 					[musicBlob],
-					params.music.split("/").pop() || "music",
+					musicUrl.split("/").pop() || "music",
 					{
 						type: musicBlob.type || "audio/mpeg",
 					},

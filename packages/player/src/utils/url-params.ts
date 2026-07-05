@@ -8,6 +8,10 @@ export interface URLParams {
 	cover?: string;
 	title?: string;
 	artist?: string;
+	server?: string;
+	type?: string;
+	id?: string;
+	api?: string;
 }
 
 /**
@@ -21,6 +25,10 @@ export function parseURLParams(): URLParams {
 		cover: params.get("cover") || undefined,
 		title: params.get("title") || undefined,
 		artist: params.get("artist") || undefined,
+		server: params.get("server") || undefined,
+		type: params.get("type") || undefined,
+		id: params.get("id") || undefined,
+		api: params.get("api") || undefined,
 	};
 }
 
@@ -36,7 +44,7 @@ export async function loadFileFromURL(url: string): Promise<Blob> {
 }
 
 /**
- * 检查是否有URL参数需要处理
+ * 检查是否有普通URL参数需要处理
  */
 export function hasURLParams(): boolean {
 	const params = parseURLParams();
@@ -47,4 +55,12 @@ export function hasURLParams(): boolean {
 		params.title ||
 		params.artist
 	);
+}
+
+/**
+ * 检查是否有Meting-Api URL参数需要处理
+ */
+export function hasMetingParams(): boolean {
+	const params = parseURLParams();
+	return !!(params.server && params.type && params.id && params.api);
 }

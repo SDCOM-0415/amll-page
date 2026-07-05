@@ -116,6 +116,7 @@ function App() {
 				<LocalMusicContext />
 			)}
 
+			{/* 添加URL参数处理组件 */}
 			<URLParamsHandler />
 			<SpeedInsights />
 			<Analytics />
