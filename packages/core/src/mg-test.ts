@@ -116,7 +116,7 @@ window.addEventListener("resize", updateControlPointDraggers);
 
 const resultTextArea = document.getElementById(
 	"result",
-)! as HTMLTextAreaElement;
+) as HTMLTextAreaElement;
 resultTextArea.value = "// 控制点的设置代码将会在这里显示";
 function updateResult() {
 	const result = [
@@ -416,8 +416,8 @@ const actions = {
 	loadCode: () => {
 		try {
 			const code = resultTextArea.value;
-			let loadedPreset: any = null;
-			const preset = (width: number, height: number, conf: any[]) => {
+			let loadedPreset: { width: number; height: number; conf: unknown[] } | null = null;
+			const preset = (width: number, height: number, conf: unknown[]) => {
 				loadedPreset = { width, height, conf };
 			};
 			const p = (

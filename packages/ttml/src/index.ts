@@ -1,3 +1,3 @@
 export * from "./parser";
-export * from "./writer";
 export type * from "./ttml-types";
+export * from "./writer";

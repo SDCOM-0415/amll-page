@@ -1,5 +1,5 @@
 const WHITE_SPACE = /^\s+/;
-const LATIN = /^[\p{L}0-9!"#$%&’()*+,-./:;<=>?@\[\]^_`\{|\}~]+/iu;
+const LATIN = /^[\p{L}0-9!"#$%&’()*+,-./:;<=>?@[\]^_`{|}~]+/iu;
 
 export interface TextLayoutResult {
 	text: string;

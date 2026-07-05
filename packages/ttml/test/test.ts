@@ -1,4 +1,5 @@
 import { parseTTML } from "../src";
+
 document.getElementById("a")?.addEventListener("input", (evt) => {
 	const target = evt.target as HTMLTextAreaElement;
 	const lines = parseTTML(target.value);

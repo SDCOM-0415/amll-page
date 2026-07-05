@@ -147,16 +147,30 @@ export const Component: FC = () => {
 	const playSongByIndex = useAtomValue(onRequestPlaySongByIndexAtom).onEmit;
 
 	const onAddMetingMusic = useCallback(async () => {
-		const apiUrl = prompt(t("page.playlist.addMeting.apiUrl", "请输入 Meting API 地址 (留空使用默认)"), "https://api.meting.icu/api");
+		const apiUrl = prompt(
+			t(
+				"page.playlist.addMeting.apiUrl",
+				"请输入 Meting API 地址 (留空使用默认)",
+			),
+			"https://api.meting.icu/api",
+		);
 		if (apiUrl === null) return;
-		
-		const server = prompt(t("page.playlist.addMeting.server", "请输入平台 (netease/tencent/kugou/bilibili)"), "netease");
+
+		const server = prompt(
+			t(
+				"page.playlist.addMeting.server",
+				"请输入平台 (netease/tencent/kugou/bilibili)",
+			),
+			"netease",
+		);
 		if (!server) return;
-		
+
 		const id = prompt(t("page.playlist.addMeting.id", "请输入歌曲 ID"));
 		if (!id) return;
 
-		const toastId = toast.loading(t("page.playlist.addMeting.loading", "正在获取并解析 Meting 歌曲..."));
+		const toastId = toast.loading(
+			t("page.playlist.addMeting.loading", "正在获取并解析 Meting 歌曲..."),
+		);
 
 		try {
 			const baseUrl = apiUrl.trim() || "https://api.meting.icu/api";
@@ -176,10 +190,12 @@ export const Component: FC = () => {
 
 			const musicUrlHash = await crypto.subtle.digest(
 				"SHA-256",
-				new TextEncoder().encode(songData.url)
+				new TextEncoder().encode(songData.url),
 			);
 			const hashArray = Array.from(new Uint8Array(musicUrlHash));
-			const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+			const hashHex = hashArray
+				.map((b) => b.toString(16).padStart(2, "0"))
+				.join("");
 			const songId = `url-${hashHex.substring(0, 16)}`;
 
 			const now = Date.now();
@@ -199,7 +215,7 @@ export const Component: FC = () => {
 			};
 
 			await db.songs.put(song);
-			
+
 			if (!playlist?.songIds.includes(songId)) {
 				await db.playlists.update(Number(param.id), (obj) => {
 					obj.songIds.unshift(songId);

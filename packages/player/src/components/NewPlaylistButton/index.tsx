@@ -1,5 +1,13 @@
-import { PlusIcon, Link2Icon } from "@radix-ui/react-icons";
-import { Button, Dialog, Flex, Text, TextField, SegmentedControl, Box } from "@radix-ui/themes";
+import { Link2Icon, PlusIcon } from "@radix-ui/react-icons";
+import {
+	Box,
+	Button,
+	Dialog,
+	Flex,
+	SegmentedControl,
+	Text,
+	TextField,
+} from "@radix-ui/themes";
 import { type FC, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
@@ -13,7 +21,7 @@ export const NewPlaylistButton: FC = () => {
 	const [playlistId, setPlaylistId] = useState("");
 	const [apiUrl, setApiUrl] = useState("https://api.meting.icu/api");
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	
+
 	const { t } = useTranslation();
 
 	const cannotCreate = useMemo(() => {
@@ -23,7 +31,7 @@ export const NewPlaylistButton: FC = () => {
 
 	const onAddPlaylist = async () => {
 		if (cannotCreate) return;
-		
+
 		if (type === "local") {
 			db.playlists.add({
 				name,
@@ -34,7 +42,9 @@ export const NewPlaylistButton: FC = () => {
 			});
 		} else {
 			setIsSubmitting(true);
-			const id = toast.loading(t("page.playlist.new.meting.loading", "正在获取歌单信息..."));
+			const id = toast.loading(
+				t("page.playlist.new.meting.loading", "正在获取歌单信息..."),
+			);
 			try {
 				const baseUrl = apiUrl.trim() || "https://api.meting.icu/api";
 				const separator = baseUrl.includes("?") ? "&" : "?";
@@ -48,8 +58,11 @@ export const NewPlaylistButton: FC = () => {
 					throw new Error("歌单数据为空或不存在");
 				}
 
-				toast.update(id, { 
-					render: t("page.playlist.new.meting.parsing", "正在解析并保存歌曲..."),
+				toast.update(id, {
+					render: t(
+						"page.playlist.new.meting.parsing",
+						"正在解析并保存歌曲...",
+					),
 				});
 
 				const validSongs: Song[] = [];
@@ -62,16 +75,18 @@ export const NewPlaylistButton: FC = () => {
 
 					const musicUrlHash = await crypto.subtle.digest(
 						"SHA-256",
-						new TextEncoder().encode(songData.url)
+						new TextEncoder().encode(songData.url),
 					);
 					const hashArray = Array.from(new Uint8Array(musicUrlHash));
-					const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+					const hashHex = hashArray
+						.map((b) => b.toString(16).padStart(2, "0"))
+						.join("");
 					const songId = `url-${hashHex.substring(0, 16)}`;
 
 					// 使用空白Blob作为占位，因为实际播放时URLParamsHandler或者引擎应该支持URL
 					const emptyBlob = new Blob([], { type: "audio/mpeg" });
-					let coverBlob = new Blob([], { type: "image/png" });
-					
+					const coverBlob = new Blob([], { type: "image/png" });
+
 					// 仅作基本信息的保存
 					validSongs.push({
 						id: songId,
@@ -88,10 +103,14 @@ export const NewPlaylistButton: FC = () => {
 						accessTime: now,
 					});
 					songIds.push(songId);
-					
+
 					if (i % 20 === 0) {
-						toast.update(id, { 
-							render: t("page.playlist.new.meting.progress", "正在保存歌曲 ({current}/{total})", { current: i, total: data.length }) 
+						toast.update(id, {
+							render: t(
+								"page.playlist.new.meting.progress",
+								"正在保存歌曲 ({current}/{total})",
+								{ current: i, total: data.length },
+							),
 						});
 					}
 				}
@@ -107,11 +126,21 @@ export const NewPlaylistButton: FC = () => {
 					playTime: 0,
 					songIds,
 				});
-				
-				toast.update(id, { render: t("page.playlist.new.meting.success", "添加成功"), type: "success", isLoading: false, autoClose: 2000 });
+
+				toast.update(id, {
+					render: t("page.playlist.new.meting.success", "添加成功"),
+					type: "success",
+					isLoading: false,
+					autoClose: 2000,
+				});
 			} catch (error) {
 				console.error("获取Meting歌单失败", error);
-				toast.update(id, { render: `添加失败: ${error instanceof Error ? error.message : String(error)}`, type: "error", isLoading: false, autoClose: 3000 });
+				toast.update(id, {
+					render: `添加失败: ${error instanceof Error ? error.message : String(error)}`,
+					type: "error",
+					isLoading: false,
+					autoClose: 3000,
+				});
 			} finally {
 				setIsSubmitting(false);
 			}
@@ -130,14 +159,19 @@ export const NewPlaylistButton: FC = () => {
 				<Dialog.Title>
 					<Trans i18nKey="newPlaylist.dialog.title">新建歌单</Trans>
 				</Dialog.Title>
-				
+
 				<Flex direction="column" mb="4">
-					<SegmentedControl.Root value={type} onValueChange={(v: "local" | "meting") => setType(v)}>
+					<SegmentedControl.Root
+						value={type}
+						onValueChange={(v: "local" | "meting") => setType(v)}
+					>
 						<SegmentedControl.Item value="local">
 							<Trans i18nKey="newPlaylist.dialog.type.local">普通歌单</Trans>
 						</SegmentedControl.Item>
 						<SegmentedControl.Item value="meting">
-							<Trans i18nKey="newPlaylist.dialog.type.meting">Meting API 导入</Trans>
+							<Trans i18nKey="newPlaylist.dialog.type.meting">
+								Meting API 导入
+							</Trans>
 						</SegmentedControl.Item>
 					</SegmentedControl.Root>
 				</Flex>
@@ -149,7 +183,10 @@ export const NewPlaylistButton: FC = () => {
 								<Trans i18nKey="newPlaylist.dialog.name">歌单名称</Trans>
 							</Text>
 							<TextField.Root
-								placeholder={t("newPlaylist.dialog.namePlaceholder", "歌单名称")}
+								placeholder={t(
+									"newPlaylist.dialog.namePlaceholder",
+									"歌单名称",
+								)}
 								value={name}
 								onChange={(e) => setName(e.currentTarget.value)}
 								autoFocus
@@ -158,36 +195,56 @@ export const NewPlaylistButton: FC = () => {
 					) : (
 						<>
 							<Text>
-								<Trans i18nKey="newPlaylist.dialog.metingServer">平台 (server)</Trans>
+								<Trans i18nKey="newPlaylist.dialog.metingServer">
+									平台 (server)
+								</Trans>
 							</Text>
 							<SegmentedControl.Root value={server} onValueChange={setServer}>
-								<SegmentedControl.Item value="netease">Netease</SegmentedControl.Item>
-								<SegmentedControl.Item value="tencent">Tencent</SegmentedControl.Item>
-								<SegmentedControl.Item value="kugou">Kugou</SegmentedControl.Item>
-								<SegmentedControl.Item value="bilibili">Bilibili</SegmentedControl.Item>
+								<SegmentedControl.Item value="netease">
+									Netease
+								</SegmentedControl.Item>
+								<SegmentedControl.Item value="tencent">
+									Tencent
+								</SegmentedControl.Item>
+								<SegmentedControl.Item value="kugou">
+									Kugou
+								</SegmentedControl.Item>
+								<SegmentedControl.Item value="bilibili">
+									Bilibili
+								</SegmentedControl.Item>
 							</SegmentedControl.Root>
 
 							<Text mt="2">
 								<Trans i18nKey="newPlaylist.dialog.metingId">歌单 ID</Trans>
 							</Text>
 							<TextField.Root
-								placeholder={t("newPlaylist.dialog.metingIdPlaceholder", "例如: 3778678")}
+								placeholder={t(
+									"newPlaylist.dialog.metingIdPlaceholder",
+									"例如: 3778678",
+								)}
 								value={playlistId}
 								onChange={(e) => setPlaylistId(e.currentTarget.value)}
 							/>
-							
+
 							<Text mt="2">
 								<Trans i18nKey="newPlaylist.dialog.name">歌单名称</Trans>
-								<Text size="1" color="gray" ml="2">(可选)</Text>
+								<Text size="1" color="gray" ml="2">
+									(可选)
+								</Text>
 							</Text>
 							<TextField.Root
-								placeholder={t("newPlaylist.dialog.namePlaceholderOptional", "留空将使用默认名称")}
+								placeholder={t(
+									"newPlaylist.dialog.namePlaceholderOptional",
+									"留空将使用默认名称",
+								)}
 								value={name}
 								onChange={(e) => setName(e.currentTarget.value)}
 							/>
 
 							<Text mt="2">
-								<Trans i18nKey="newPlaylist.dialog.apiUrl">Meting API 地址</Trans>
+								<Trans i18nKey="newPlaylist.dialog.apiUrl">
+									Meting API 地址
+								</Trans>
 							</Text>
 							<TextField.Root
 								placeholder="https://api.meting.icu/api"

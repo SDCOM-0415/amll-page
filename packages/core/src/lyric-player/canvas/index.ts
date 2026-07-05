@@ -6,7 +6,7 @@ export class CanvasLyricPlayer extends LyricPlayerBase {
 	private canvasElement = document.createElement("canvas");
 	override currentLyricLineObjects: CanvasLyricLine[] = [];
 	/** @internal */
-	readonly ctx = this.canvasElement.getContext("2d")!;
+	readonly ctx = this.canvasElement.getContext("2d") as CanvasRenderingContext2D;
 	/** @internal */
 	baseLineHeight = 1;
 	/** @internal */

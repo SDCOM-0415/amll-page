@@ -22,8 +22,8 @@ import { audioPlayer } from "../../utils/ffmpeg-engine/FFmpegAudioPlayer";
 import { extractMusicMetadata } from "../../utils/music-file.ts";
 import { mapMetadataToQuality } from "../../utils/quality.ts";
 import {
-	hasURLParams,
 	hasMetingParams,
+	hasURLParams,
 	loadFileFromURL,
 	parseURLParams,
 } from "../../utils/url-params.ts";

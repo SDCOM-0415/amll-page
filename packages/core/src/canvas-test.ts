@@ -1,6 +1,6 @@
 import {
-	type TextLayoutConfig,
 	layoutWord,
+	type TextLayoutConfig,
 } from "./lyric-player/canvas/text-layout";
 
 const canvas = document.createElement("canvas");

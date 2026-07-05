@@ -7,7 +7,6 @@
 	width: var(--amll-lp-width, 100%);
 	min-width: var(--amll-lp-width, 100%);
 	max-width: var(--amll-lp-width, 100%);
-	width: 100%;
 	height: fit-content;
 	padding: 2vh 1em;
 	contain: content;
@@ -31,6 +30,11 @@
 		background-color: var(--amll-lp-hover-bg-color, #ffffff05);
 		/* box-shadow: 0 0 0 var(--amll-lp-hover-bg-color, #fff1); */
 	}
+}
+
+.lyricDuetLine {
+	text-align: right;
+	transform-origin: right;
 }
 
 .lyricBgLine {
@@ -59,7 +63,7 @@
 
 :global(.amll-lyric-player) {
 	&:hover .lyricLine {
-		filter: unset !important;
+		filter: unset;
 	}
 
 	&.hasDuetLine {
@@ -70,11 +74,6 @@
 			padding-left: 15%;
 		}
 	}
-}
-
-.lyricDuetLine {
-	text-align: right;
-	transform-origin: right;
 }
 
 .lyricMainLine {
@@ -158,5 +157,5 @@
 }
 
 .tmpDisableTransition {
-	transition: none !important;
+	transition: none;
 }

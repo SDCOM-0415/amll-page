@@ -10,7 +10,6 @@
 	width: var(--amll-lp-width, 100%);
 	min-width: var(--amll-lp-width, 100%);
 	max-width: var(--amll-lp-width, 100%);
-	width: 100%;
 	height: fit-content;
 	padding: 0.5em 1em;
 	contain: content;
@@ -73,7 +72,7 @@
 
 :global(.amll-lyric-player) {
 	&:hover .lyricLine {
-		filter: unset !important;
+		filter: unset;
 	}
 
 	&.hasDuetLine {
@@ -81,7 +80,7 @@
 			padding-right: 15%;
 		}
 
-		.lyricDuetLine {
+		:local(.lyricDuetLine) {
 			padding-left: 15%;
 		}
 	}
@@ -220,5 +219,5 @@
 }
 
 .tmpDisableTransition {
-	transition: none !important;
+	transition: none;
 }

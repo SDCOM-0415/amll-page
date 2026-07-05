@@ -87,7 +87,7 @@ export class CanvasLyricLine extends LyricLineBase {
 		this.lineCanvas.width = this.player.ctx.canvas.width;
 		this.lineCanvas.height = this.lineSize[1] * devicePixelRatio;
 
-		const lctx = this.lineCanvas.getContext("2d")!;
+		const lctx = this.lineCanvas.getContext("2d") as CanvasRenderingContext2D;
 		lctx.globalAlpha = 1;
 		this.player.setFontSize(1);
 		lctx.font = ctx.font;

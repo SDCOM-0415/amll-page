@@ -32,8 +32,8 @@ import {
 
 const mapLyric = (
 	line: RawLyricLine,
-	i: number,
-	lines: RawLyricLine[],
+	_i: number,
+	_lines: RawLyricLine[],
 ): LyricLine => ({
 	words: line.words.map((w) => ({ ...w, obscene: false })),
 	startTime: line.words[0]?.startTime ?? 0,
@@ -88,9 +88,9 @@ const App: FC = () => {
 					console.log("tag read", tag);
 					const title: string = tag.tags?.title ?? file.name ?? "未知歌曲";
 					const album: string = tag.tags?.album ?? "未知专辑";
-					const artist: string = tag.tags?.artist ?? "未知作者";
-					const lyrics: string = tag.tags?.lyrics ?? "";
-					store.set(musicNameAtom, title);
+			const artist: string = tag.tags?.artist ?? "未知作者";
+			const _lyrics: string = tag.tags?.lyrics ?? "";
+			store.set(musicNameAtom, title);
 					store.set(musicAlbumNameAtom, album);
 					store.set(musicArtistsAtom, [{ name: artist, id: "unknown" }]);
 					if ("picture" in tag.tags) {
@@ -179,7 +179,7 @@ const App: FC = () => {
 
 	return (
 		<>
-			{/* biome-ignore lint/a11y/useMediaCaption: <explanation> */}
+			{/* biome-ignore lint/a11y/useMediaCaption: ignore for test */}
 			<audio ref={audioRef} />
 
 			<ContextMenu.Root>
