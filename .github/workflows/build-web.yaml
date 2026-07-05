@@ -114,14 +114,10 @@ jobs:
           echo "文件列表:"
           find packages/player/dist -type f | head -20
 
-      - name: 上传构建产物
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build-${{ github.sha }}
-          path: |
-            packages/player/dist/**
-          retention-days: 30
-          compression-level: 9
+      - name: 部署到 EdgeOne Makers
+        run: npx edgeone makers deploy packages/player/dist -n amll-page -t ${{ secrets.EO_SECRET }} -e production
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EO_SECRET }}
 
       - name: 显示构建信息
         run: |
