@@ -178,9 +178,9 @@ export const wsServerUrlAtom = atomWithStorage<string>(
 );
 
 /**
- * Meting API 默认服务地址
+ * Meting API 默认地址
  */
 export const metingApiUrlAtom = atomWithStorage<string>(
 	"amll-player.metingApiUrl",
-	"http://127.0.0.1:3000/api",
+	"https://api.meting.icu/api",
 );

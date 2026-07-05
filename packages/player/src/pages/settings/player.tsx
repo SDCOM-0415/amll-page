@@ -69,7 +69,6 @@ import {
 	DarkMode,
 	darkModeAtom,
 	showStatJSFrameAtom,
-	metingApiUrlAtom,
 } from "../../states/appAtoms.ts";
 import {
 	enableAuditModeAtom,
@@ -1106,31 +1105,6 @@ const OthersSettings = () => {
 					歌词页面开发用工具
 				</Trans>
 			</Button>
-
-			{/* Meting-API 设置 */}
-			<SubTitle>
-				<Trans i18nKey="page.settings.meting.subtitle">Meting API 设置</Trans>
-			</SubTitle>
-			<InputSettings
-				label={t(
-					"page.settings.meting.apiUrl.label",
-					"Meting API 服务端地址",
-				)}
-				description={t(
-					"page.settings.meting.apiUrl.description",
-					"第三方音乐平台接口服务地址（如果部署在边缘函数平台如 Vercel/Cloudflare，可填入你部署的代理地址或默认的后端服务地址）。",
-				)}
-				configAtom={metingApiUrlAtom}
-				placeholder="https://api.example.com"
-				style={{ minWidth: "20em" }}
-			/>
-			<SettingEntry 
-				label={t("page.settings.meting.description.label", "如何使用 Meting API？")}
-				description={t(
-					"page.settings.meting.description.text", 
-					"直接在应用 URL 尾部添加查询参数即可直接播放第三方平台歌曲（若URL未携带 api 参数，将自动使用上方配置的默认服务地址）。示例：/?server=netease&type=song&id=35847388"
-				)}
-			/>
 		</>
 	);
 };
