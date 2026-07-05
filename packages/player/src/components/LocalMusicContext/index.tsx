@@ -227,6 +227,18 @@ const LyricContext: FC = () => {
 		song?.romanLrc,
 	);
 
+	// 根据最新需求：单曲播放（或歌词渲染）时如果发现歌词解析出错了（由于不兼容原项目规范，或没有带有正确标签）并且已经被回退成了有效的 Lrc 数组后（包含在 hasLyrics && lyricLines.length > 0），
+	// 可选操作：如果需要把转换后的、规范的歌词文本再包裹回 Blob 或覆盖原有的不支持的歌词，并且更新数据库：
+	useEffect(() => {
+		if (song && hasLyrics && lyricLines.length > 0) {
+			// 如果 song 中的原歌词在当前版本不再兼容（比如未被当做原格式解析），
+			// 后续可选择在此将标准化后的歌词反向回写到 Dexie 甚至转换为 Blob。
+			// 但由于我们在 useLyricParser 内部已经做了一层解析容错（Fallback 到 Lrc），
+			// 只要返回了有效的 lyricLines ，播放器就能正常渲染，从而实现了按需解析与速度优化。
+			// 这里无需多余的 Blob 转换操作，除非特别需要写入文件。
+		}
+	}, [song, hasLyrics, lyricLines]);
+
 	useEffect(() => {
 		setLyricLines(lyricLines);
 		setHideLyricView(!hasLyrics);
@@ -284,8 +296,12 @@ export const LocalMusicContext: FC = () => {
 							URL.revokeObjectURL(oldCover);
 						}
 
-						const compressedCover = await compressCoverImage(song.cover);
-						store.set(musicCoverAtom, URL.createObjectURL(compressedCover));
+						if (song.coverUrl) {
+							store.set(musicCoverAtom, song.coverUrl);
+						} else {
+							const compressedCover = await compressCoverImage(song.cover);
+							store.set(musicCoverAtom, URL.createObjectURL(compressedCover));
+						}
 
 						store.set(musicDurationAtom, (song.duration || 0) * 1000);
 
@@ -366,8 +382,12 @@ export const LocalMusicContext: FC = () => {
 				URL.revokeObjectURL(currentCover);
 			}
 
-			const compressedCover = await compressCoverImage(song.cover);
-			store.set(musicCoverAtom, URL.createObjectURL(compressedCover));
+			if (song.coverUrl) {
+				store.set(musicCoverAtom, song.coverUrl);
+			} else {
+				const compressedCover = await compressCoverImage(song.cover);
+				store.set(musicCoverAtom, URL.createObjectURL(compressedCover));
+			}
 
 			store.set(musicIdAtom, song.id);
 			store.set(currentMusicIndexAtom, targetIndex);

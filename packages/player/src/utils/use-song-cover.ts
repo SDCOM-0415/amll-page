@@ -6,6 +6,10 @@ export const useSongCover = (song?: Song) => {
 	const [songImgUrl, setSongImgUrl] = useState<string>("");
 
 	useLayoutEffect(() => {
+		if (song?.coverUrl) {
+			setSongImgUrl(song.coverUrl);
+			return;
+		}
 		if (song?.cover) {
 			if (song.cover.type.startsWith("image") || song.cachedThumbnail) {
 				const newUri = URL.createObjectURL(song.cachedThumbnail || song.cover);

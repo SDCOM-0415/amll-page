@@ -21,6 +21,7 @@ export interface Song {
 	cover: Blob;
 	file: Blob;
 	cachedThumbnail?: Blob;
+	coverUrl?: string;
 	duration: number;
 	lyricFormat: string;
 	lyric: string;

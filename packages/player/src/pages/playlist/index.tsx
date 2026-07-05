@@ -198,18 +198,10 @@ export const Component: FC = () => {
 				.join("");
 			const songId = `url-${hashHex.substring(0, 16)}`;
 
-			let coverBlob = new Blob([], { type: "image/png" });
-			if (songData.pic) {
-				try {
-					const { loadFileFromURL } = await import("../../utils/url-params.ts");
-					coverBlob = await loadFileFromURL(songData.pic);
-				} catch (e) {
-					console.warn("加载 Meting 歌曲封面失败", e);
-				}
-			}
+			const emptyBlob = new Blob([], { type: "audio/mpeg" });
+			const coverBlob = new Blob([], { type: "image/png" });
 
 			const now = Date.now();
-			const emptyBlob = new Blob([], { type: "audio/mpeg" });
 			const song: Song = {
 				id: songId,
 				filePath: songData.url,
@@ -217,6 +209,7 @@ export const Component: FC = () => {
 				songArtists: songData.author || "Unknown Artist",
 				songAlbum: "Unknown Album",
 				cover: coverBlob,
+				coverUrl: songData.pic, // 使用在线 URL 懒加载封面
 				file: emptyBlob,
 				duration: 0,
 				lyricFormat: songData.lrc ? "lrc" : "",

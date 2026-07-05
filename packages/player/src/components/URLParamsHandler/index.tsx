@@ -143,13 +143,6 @@ export const URLParamsHandler: FC = () => {
 
 				// 加载封面文件（如果有）
 				let coverBlob = new Blob([], { type: "image/png" });
-				if (coverUrl) {
-					try {
-						coverBlob = await loadFileFromURL(coverUrl);
-					} catch (e) {
-						console.warn("加载封面失败", e);
-					}
-				}
 
 				// 加载歌词文件（如果有）
 				let lyricContent = "";
@@ -213,6 +206,7 @@ export const URLParamsHandler: FC = () => {
 					songArtists,
 					songAlbum,
 					cover: finalCover,
+					coverUrl: coverUrl, // 懒加载封面 URL
 					file: musicBlob,
 					duration: finalDuration,
 					lyricFormat,
@@ -254,7 +248,11 @@ export const URLParamsHandler: FC = () => {
 					musicArtistsAtom,
 					songArtists.split(",").map((v) => ({ name: v.trim(), id: v.trim() })),
 				);
-				store.set(musicCoverAtom, URL.createObjectURL(finalCover));
+				if (coverUrl) {
+					store.set(musicCoverAtom, coverUrl);
+				} else {
+					store.set(musicCoverAtom, URL.createObjectURL(finalCover));
+				}
 				store.set(musicIdAtom, songId);
 
 				// 设置播放队列
