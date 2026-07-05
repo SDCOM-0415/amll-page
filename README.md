@@ -17,6 +17,40 @@
    ?music=音乐链接&lyric=歌词链接&cover=封面链接&title=歌曲名&artist=艺术家
    ```
 
+## Meting API Integration in AMLL Player
+
+AMLL Player now supports loading third-party music platform audio, lyrics, and covers via URL parameters from a `Meting-Api` server.
+
+Usage (via query params on startup):
+```text
+http://localhost:5173/?server=netease&type=song&id=35847388&api=http://127.0.0.1:3000/api
+```
+
+* `server`: The music provider (e.g. `netease`, `tencent`)
+* `type`: Resource type (e.g. `song`)
+* `id`: The song ID
+* `api`: Your Meting-Api deployment endpoint
+
+### Build & Development Instructions
+
+1. Install dependencies (we use `pnpm` workspace):
+```bash
+npm install -g pnpm
+pnpm install
+```
+*(If you are in mainland China, use `pnpm install --registry=https://registry.npmmirror.com/`)*
+
+2. Build the shared libraries:
+```bash
+pnpm run build:libs
+```
+
+3. Start the dev server for the player package:
+```bash
+cd packages/player
+pnpm run dev
+```
+
 ## 许可证
 
 本项目采用AGPL许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。

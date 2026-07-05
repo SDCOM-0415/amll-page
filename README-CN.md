@@ -33,7 +33,7 @@
 
 ### 外部工具
 
--   [AMLL Player](./packages/player/README.md)：AMLL 外置播放器，提供独立的外置歌词播放器，并通过独有的 WebSocket 协议与 AMLL 任意实现了协议的程序进行通信展示歌词
+-   [AMLL Player](./packages/player/README.md)：AMLL 外置播放器，提供独立的外置歌词播放器，并通过独有的 WebSocket 协议与 AMLL 任意实现了协议的程序进行通信展示歌词。支持 `Meting-API` 参数配置，通过 URL 参数即可播放线上歌曲。
 -   [AMLL TTML Tool](https://github.com/Steve-xmh/amll-ttml-tool)： AMLL TTML 编辑器，提供对 TTML 格式歌词的编辑支持，并使用 AMLL Core 进行实时预览
 -   [AMLL TTML Database](https://github.com/Steve-xmh/amll-ttml-db)： AMLL TTML 数据库，提供 TTML 歌词存储仓库，以让各类歌词播放器可以使用由社区制作的 TTML 逐词歌词
 
@@ -69,14 +69,39 @@ GPU 性能在以下状况下能够以预期尺寸下满 60 帧运行：
 
 由于作者精力有限，已经无力处理大家使用过程中产生的问题，所以关闭了 Issues 板块，但是欢迎任何对代码有积极贡献的 Pull Request！
 
+## AMLL Player 中 Meting API 集成
+
+AMLL Player 现在支持通过 `Meting-Api` 服务，通过在启动页面的 URL 附加参数加载并播放第三方音乐平台的歌曲。 
+
+使用方式（在启动后添加查询参数）：
+```text
+http://localhost:5173/?server=netease&type=song&id=35847388&api=http://127.0.0.1:3000/api
+```
+
+* `server`: 平台名称（例如：`netease`, `tencent`）
+* `type`: 获取的资源类型（例如：`song`）
+* `id`: 音乐平台的歌曲 ID
+* `api`: 本地或远程 `Meting-Api` 服务的部署接口（需允许跨域访问）
+
 ## 开发/构建/打包流程
 
-安装好 `yarn`, `rustc`, `wasm-pack`，克隆本仓库到任意文件夹后在终端输入以下指令即可构建：
+项目为 Monorepo，并使用了 `pnpm` 进行管理。请按照以下步骤搭建开发环境：
 
+1. 安装所有依赖（如果你在国内，推荐使用 npmmirror 的源）：
 ```bash
-yarn
-yarn lerna run build:dev --scope "@applemusic-like-lyrics/*" # 开发构建
-yarn lerna run build --scope "@applemusic-like-lyrics/*" # 发行构建
+npm install -g pnpm
+pnpm install --registry=https://registry.npmmirror.com/
+```
+
+2. 构建公共依赖库：
+```bash
+pnpm run build:libs
+```
+
+3. 启动 `amll-player` 播放器的本地测试服务器：
+```bash
+cd packages/player
+pnpm run dev
 ```
 
 ## 鸣谢

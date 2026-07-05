@@ -31,8 +31,5 @@
 	"sideEffects": [
 		"./pkg/amll_lyric.js",
 		"./pkg/snippets/*"
-	],
-	"dependencies": {
-		"wasm-pack": "^0.14.0"
-	}
+	]
 }

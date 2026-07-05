@@ -1,27 +1,57 @@
 # AMLL Player
 
-一个通过 本地音乐文件/WebSocket Server 获取音频播放信息的独立歌词页面播放器。
+[English](/packages/player/README.md) / 简体中文
+
+一个独立的歌词页面播放器，可以通过本地音乐文件/ WebSocket Server 获取音频播放信息。
 
 功能/特性列表：
 
-- 与任何实现 AMLL WS Protocol 的客户端进行通信，同步播放信息进度，并获取对应的歌词以进行播放展示
-- 支持读取本地音频文件播放，或加载本地歌词文件
+- 与任何实现 AMLL WS 协议的客户端通信，同步播放进度，并获取相应的歌词进行播放显示
+- 支持读取本地音频文件进行播放，或加载本地歌词文件
 - 支持加载各种歌词格式
-- 高性能 —— 不会因为某些软件自身问题导致歌词展示效果受到影响
-- 预计支持播放状态传输协议：[SMTC (Windows)](https://learn.microsoft.com/en-us/uwp/api/windows.media.systemmediatransportcontrols?view=winrt-26100) / [MPRIS (Linux/XDG)](https://www.freedesktop.org/wiki/Specifications/mpris-spec/) / [MPNowPlayingInfoCenter (macOS)](https://developer.apple.com/documentation/mediaplayer/mpnowplayinginfocenter)
+- 性能高，不会出现因为软件的问题导致影响歌词展示的情况
+- 预计支持播放状态转移协议：[SMTC (Windows)](https://learn.microsoft.com/zh-cn/uwp/api/windows.media.systemmediatransportcontrols?view=winrt-26100) / [MPRIS (Linux/XDG)](https://www.freedesktop.org/wiki/Specifications/mpris-spec/) / [MPNowPlayingInfoCenter (macOS)](https://developer.apple.com/documentation/mediaplayer/mpnowplayinginfocenter)
 
-## 安装使用
+## Meting API 集成
 
-由于播放器还在兼容状态，所以仅可通过 [Github Action](https://github.com/Steve-xmh/applemusic-like-lyrics/actions/workflows/build-player.yaml) 下载开发构建，日后会推出正式版。
+AMLL Player 现在支持通过 `Meting-Api` 加载和播放第三方音乐平台歌曲。在应用启动后，你可以通过 URL 参数直接请求音频、歌词以及封面：
 
-## 为什么会有这个？
+```text
+http://localhost:5173/?server=netease&type=song&id=35847388&api=http://127.0.0.1:3000/api
+```
 
-歌词播放器相当于外挂字幕一样的软件，在独立于插件环境以外的环境播放歌词。
+参数说明：
+- `server`: 音乐平台名称（例如 `netease`, `tencent` 等）
+- `type`: 获取资源的类型（例如 `song`）
+- `id`: 目标歌曲的 ID
+- `api`: Meting-Api 服务端的完整 URL（注意处理 CORS 跨域问题）
 
-经过作者的性能测试，发现以插件形式嵌入到播放页面会因为插件运行环境自身浏览器框架问题导致掉帧和不定卡顿的问题。
+## 安装与使用
 
-故作者决定将播放页面分离到一个独立的桌面程序进行以提高播放性能和效果，而原插件则负责将播放的信息和状态传递给歌词播放器。
+由于该播放器仍在开发中，目前你可以通过源码进行构建和开发：
 
-因此如果你也有少许卡顿现象，可以尝试使用这个歌词播放器，性能应该可以有所改善。
+### 1. 安装依赖包 (推荐使用 pnpm 并在国内配置镜像源)
+```bash
+npx pnpm install --registry=https://registry.npmmirror.com/
+```
 
-~~毕竟真的不是我插件优化差啊（）~~
+### 2. 构建依赖库
+因为这是一个 Monorepo 项目，需要预先构建相关的依赖组件：
+```bash
+npx pnpm run build:libs
+```
+
+### 3. 启动开发服务器
+可以通过以下命令启动本地的 Vite 开发服务器：
+```bash
+cd packages/player
+npx pnpm run dev
+```
+
+## 为什么有这个东西？
+
+类似于外挂字幕一类的软件，这个歌词播放器可以将歌词放在一个独立于插件环境之外的地方播放。这带来了很多好处：可以利用浏览器生态实现更好的跨平台性，以及能够引入更多先进的技术来提高歌词效果的上限。
+
+## 贡献
+
+如果你想在修改代码的同时立即看到在桌面端上运行的效果，你可以将打包命令由原本的 `vite build` 更改为 `vite build --watch` ，Tauri 那边热重载会立刻呈现效果。

@@ -16,6 +16,7 @@ import { db, type Song } from "../../dexie.ts";
 import {
 	currentMusicIndexAtom,
 	currentMusicQueueAtom,
+	metingApiUrlAtom,
 } from "../../states/appAtoms.ts";
 import { audioPlayer } from "../../utils/ffmpeg-engine/FFmpegAudioPlayer";
 import { extractMusicMetadata } from "../../utils/music-file.ts";
@@ -90,10 +91,12 @@ export const URLParamsHandler: FC = () => {
 				let songArtists = params.artist || "Unknown Artist";
 
 				// 如果是Meting-Api的参数
-				if (params.server && params.type && params.id && params.api) {
+				if (params.server && params.type && params.id) {
 					try {
 						toast.info("正在从Meting API获取歌曲信息...");
-						const metingApiUrl = `${params.api}?server=${params.server}&type=${params.type}&id=${params.id}`;
+						const savedMetingApi = store.get(metingApiUrlAtom);
+						const targetApi = params.api || savedMetingApi;
+						const metingApiUrl = `${targetApi}?server=${params.server}&type=${params.type}&id=${params.id}`;
 						const response = await fetch(metingApiUrl);
 						if (response.ok) {
 							const data = await response.json();

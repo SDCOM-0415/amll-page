@@ -176,3 +176,11 @@ export const wsServerUrlAtom = atomWithStorage<string>(
 	"amll-player.wsServerUrl",
 	"ws://localhost:11455",
 );
+
+/**
+ * Meting API 默认服务地址
+ */
+export const metingApiUrlAtom = atomWithStorage<string>(
+	"amll-player.metingApiUrl",
+	"http://127.0.0.1:3000/api",
+);

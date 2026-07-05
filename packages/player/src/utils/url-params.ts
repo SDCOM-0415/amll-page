@@ -62,5 +62,5 @@ export function hasURLParams(): boolean {
  */
 export function hasMetingParams(): boolean {
 	const params = parseURLParams();
-	return !!(params.server && params.type && params.id && params.api);
+	return !!(params.server && params.type && params.id);
 }
