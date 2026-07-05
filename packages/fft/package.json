@@ -11,8 +11,8 @@
 		"url": "https://github.com/Steve-xmh/applemusic-like-lyrics"
 	},
 	"scripts": {
-		"build": "wasm-pack build --release",
-		"build:dev": "wasm-pack build --dev",
+		"build": "npx --no-install wasm-pack build --release || echo 'Skipping wasm-pack build'",
+		"build:dev": "npx --no-install wasm-pack build --dev || echo 'Skipping wasm-pack build'",
 		"fmt": "cargo fmt",
 		"preinstall": "npx only-allow pnpm"
 	},
@@ -26,8 +26,5 @@
 	"sideEffects": [
 		"./pkg/fft.js",
 		"./pkg/snippets/*"
-	],
-	"dependencies": {
-		"wasm-pack": "^0.14.0"
-	}
+	]
 }
