@@ -74,6 +74,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      wasm-pack:
+        specifier: ^0.15.0
+        version: 0.15.0
 
   packages/core:
     dependencies:

@@ -89,11 +89,14 @@ jobs:
         run: pnpm i --no-frozen-lockfile --ignore-scripts
 
       - name: 预加载 wasm-pack 二进制文件
-        run: pnpm exec wasm-pack --version
+        run: |
+          pnpm exec wasm-pack --version || true
+          npx --yes wasm-pack --version || true
 
       - name: 构建库
         run: |
-          pnpm nx run-many -t build --exclude player
+          pnpm nx run @lyrics-helper-rs/ttml-processor:build
+          pnpm nx run-many -t build --exclude player,@lyrics-helper-rs/ttml-processor
           pnpm build:libs
         env:
           AMLL_GITHUB_IS_ACTION: true

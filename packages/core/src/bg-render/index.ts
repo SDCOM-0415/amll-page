@@ -4,10 +4,11 @@
  * @author SteveXMH
  */
 
-import type { AbstractBaseRenderer, BaseRenderer } from "./base.ts";
+import { type AbstractBaseRenderer, BaseRenderer } from "./base.ts";
 export { MeshGradientRenderer } from "./mesh-renderer/index.ts";
 export { PixiRenderer } from "./pixi-renderer.ts";
-export type { AbstractBaseRenderer, BaseRenderer };
+export { BaseRenderer };
+export type { AbstractBaseRenderer };
 
 export class BackgroundRender<Renderer extends BaseRenderer>
 	implements AbstractBaseRenderer

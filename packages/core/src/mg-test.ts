@@ -416,8 +416,8 @@ const actions = {
 	loadCode: () => {
 		try {
 			const code = resultTextArea.value;
-			let loadedPreset: { width: number; height: number; conf: unknown[] } | null = null;
-			const preset = (width: number, height: number, conf: unknown[]) => {
+			let loadedPreset: { width: number; height: number; conf: any[] } | null = null;
+			const preset = (width: number, height: number, conf: any[]) => {
 				loadedPreset = { width, height, conf };
 			};
 			const p = (
