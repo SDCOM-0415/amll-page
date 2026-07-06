@@ -26,7 +26,12 @@ export const PlaylistCover: FC<
 					song?.coverUrl
 				) {
 					result.push(song);
-					if (result.length === 4) break;
+					if (playlist.metingServer) {
+						// 如果是 meting api 导入的歌单，只使用第一首歌的封面
+						break;
+					} else if (result.length === 4) {
+						break;
+					}
 				}
 			}
 			return result;

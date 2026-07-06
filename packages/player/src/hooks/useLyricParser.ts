@@ -130,8 +130,17 @@ export const useLyricParser = (
 						break;
 					}
 					case "yrc": {
-						parsedLyricLines = parseYrc(processLyricStr);
-						console.log(LYRIC_LOG_TAG, "解析出 YRC 歌词", parsedLyricLines);
+						const yrcPattern = /^\[\d+,\d+\]\(\d+,\d+,\d+\)/m;
+						if (yrcPattern.test(processLyricStr)) {
+							parsedLyricLines = parseYrc(processLyricStr);
+							console.log(LYRIC_LOG_TAG, "解析出 YRC 歌词", parsedLyricLines);
+						} else {
+							console.log(
+								LYRIC_LOG_TAG,
+								"内容并非 YRC 逐字格式，降级解析为普通 LRC",
+							);
+							parsedLyricLines = parseLrc(processLyricStr);
+						}
 						break;
 					}
 					case "qrc": {
