@@ -198,6 +198,71 @@ const LyricContext: FC = () => {
 	);
 	const store = useStore();
 
+	const [resolvedLyric, setResolvedLyric] = useState<string | undefined>(
+		undefined,
+	);
+	const [resolvedFormat, setResolvedFormat] = useState<string | undefined>(
+		undefined,
+	);
+
+	useEffect(() => {
+		if (!song) {
+			setResolvedLyric(undefined);
+			setResolvedFormat(undefined);
+			return;
+		}
+
+		const raw = song.lyric || "";
+		const isUrl =
+			raw.startsWith("http://") ||
+			raw.startsWith("https://") ||
+			raw.startsWith("//");
+
+		if (!isUrl) {
+			setResolvedLyric(raw);
+			setResolvedFormat(song.lyricFormat);
+			return;
+		}
+
+		let cancelled = false;
+		const fetchUrl = raw.startsWith("//") ? `https:${raw}` : raw;
+
+		fetch(fetchUrl)
+			.then((res) => {
+				if (!res.ok) throw new Error(`Failed to fetch lyrics: ${res.statusText}`);
+				return res.text();
+			})
+			.then((text) => {
+				if (cancelled) return;
+				const trimmed = text.trim();
+				let format = "lrc";
+				if (trimmed.startsWith("<?xml") || trimmed.includes("<tt")) {
+					format = "ttml";
+				}
+				setResolvedLyric(trimmed);
+				setResolvedFormat(format);
+
+				db.songs
+					.update(song.id, {
+						lyric: trimmed,
+						lyricFormat: format,
+					})
+					.catch((e) =>
+						console.warn("[LyricContext] Failed to persist lyrics:", e),
+					);
+			})
+			.catch((e) => {
+				if (cancelled) return;
+				console.warn("[LyricContext] Failed to fetch lyrics from URL:", e);
+				setResolvedLyric("");
+				setResolvedFormat("");
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [song?.id, song?.lyric, song?.lyricFormat]);
+
 	useEffect(() => {
 		syncLyricsDatabase(store).then((result) => {
 			switch (result.status) {
@@ -221,8 +286,8 @@ const LyricContext: FC = () => {
 	}, []);
 
 	const { lyricLines, hasLyrics } = useLyricParser(
-		song?.lyric,
-		song?.lyricFormat,
+		resolvedLyric,
+		resolvedFormat,
 		song?.translatedLrc,
 		song?.romanLrc,
 	);
