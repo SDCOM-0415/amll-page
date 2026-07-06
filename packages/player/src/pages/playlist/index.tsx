@@ -14,6 +14,9 @@ import {
 	IconButton,
 	Text,
 	TextField,
+	Dialog,
+	SegmentedControl,
+	Select,
 } from "@radix-ui/themes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion, useMotionTemplate, useScroll } from "framer-motion";
@@ -133,6 +136,41 @@ const SUPPORTED_AUDIO_EXTENSIONS = [
 	".3gp",
 ].join(",");
 
+const METING_API_PRESETS = [
+	{
+		value: "meting",
+		label: "meting.sdcom.top",
+		url: "https://meting.sdcom.top/api",
+	},
+	{
+		value: "meting-backup",
+		label: "meting-backup.sdcom.top",
+		url: "https://meting-backup.sdcom.top/api",
+	},
+	{
+		value: "api-meting",
+		label: "api.meting.icu",
+		url: "https://api.meting.icu/api",
+	},
+] as const;
+
+function normalizeApiUrl(input: string): string {
+	let url = input.trim();
+	if (!url) return METING_API_PRESETS[0].url;
+	if (!url.startsWith("http://") && !url.startsWith("https://")) {
+		url = `https://${url}`;
+	}
+	try {
+		const parsed = new URL(url);
+		if (parsed.pathname === "/" || parsed.pathname === "") {
+			parsed.pathname = "/api";
+		}
+		return parsed.toString().replace(/\/$/, "");
+	} catch {
+		return url;
+	}
+}
+
 export const Component: FC = () => {
 	const param = useParams();
 	const playlist = useLiveQuery(() => db.playlists.get(Number(param.id)));
@@ -147,36 +185,35 @@ export const Component: FC = () => {
 	const setQueue = useSetAtom(currentMusicQueueAtom);
 	const playSongByIndex = useAtomValue(onRequestPlaySongByIndexAtom).onEmit;
 
+	const [addMetingDialogOpen, setAddMetingDialogOpen] = useState(false);
+	const [metingServer, setMetingServer] = useState("netease");
+	const [metingMusicId, setMetingMusicId] = useState("");
+	const [apiSource, setApiSource] = useState("meting");
+	const [customApiUrl, setCustomApiUrl] = useState("");
+	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	const cannotCreateMetingMusic = useMemo(() => {
+		return (
+			metingMusicId.trim().length === 0 || metingServer.trim().length === 0
+		);
+	}, [metingMusicId, metingServer]);
+
 	const onAddMetingMusic = useCallback(async () => {
-		const apiUrl = prompt(
-			t(
-				"page.playlist.addMeting.apiUrl",
-				"请输入 Meting API 地址 (留空使用默认)",
-			),
-			"https://api.meting.icu/api",
-		);
-		if (apiUrl === null) return;
-
-		const server = prompt(
-			t(
-				"page.playlist.addMeting.server",
-				"请输入平台 (netease/tencent/kugou/bilibili)",
-			),
-			"netease",
-		);
-		if (!server) return;
-
-		const id = prompt(t("page.playlist.addMeting.id", "请输入歌曲 ID"));
-		if (!id) return;
+		if (cannotCreateMetingMusic) return;
 
 		const toastId = toast.loading(
 			t("page.playlist.addMeting.loading", "正在获取并解析 Meting 歌曲..."),
 		);
+		setIsSubmitting(true);
 
 		try {
-			const baseUrl = apiUrl.trim() || "https://api.meting.icu/api";
-			const separator = baseUrl.includes("?") ? "&" : "?";
-			const metingApiUrl = `${baseUrl}${separator}server=${server}&type=song&id=${id}`;
+			const preset = METING_API_PRESETS.find((p) => p.value === apiSource);
+			const resolvedApiUrl = preset
+				? preset.url
+				: normalizeApiUrl(customApiUrl);
+
+			const separator = resolvedApiUrl.includes("?") ? "&" : "?";
+			const metingApiUrl = `${resolvedApiUrl}${separator}server=${metingServer}&type=song&id=${metingMusicId.trim()}`;
 			const response = await fetch(metingApiUrl);
 			if (!response.ok) {
 				throw new Error(`请求失败: ${response.status}`);
@@ -657,7 +694,10 @@ export const Component: FC = () => {
 								<IconButton variant="soft" onClick={onAddLocalMusics}>
 									<PlusIcon />
 								</IconButton>
-								<IconButton variant="soft" onClick={onAddMetingMusic}>
+								<IconButton
+									variant="soft"
+									onClick={() => setAddMetingDialogOpen(true)}
+								>
 									<PlusIcon />
 								</IconButton>
 								{isMetingPlaylist && (
@@ -694,6 +734,96 @@ export const Component: FC = () => {
 					)}
 				</Box>
 			</Flex>
+
+			<Dialog.Root
+				open={addMetingDialogOpen}
+				onOpenChange={setAddMetingDialogOpen}
+			>
+				<Dialog.Content maxWidth="450px">
+					<Dialog.Title>
+						<Trans i18nKey="page.playlist.addMetingMusic.label">
+							添加 Meting 歌曲
+						</Trans>
+					</Dialog.Title>
+
+					<Flex gap="3" direction="column">
+						<Text>
+							<Trans i18nKey="newPlaylist.dialog.metingServer">
+								平台 (server)
+							</Trans>
+						</Text>
+						<SegmentedControl.Root
+							value={metingServer}
+							onValueChange={setMetingServer}
+						>
+							<SegmentedControl.Item value="netease">
+								Netease
+							</SegmentedControl.Item>
+							<SegmentedControl.Item value="tencent">
+								Tencent
+							</SegmentedControl.Item>
+							<SegmentedControl.Item value="kugou">Kugou</SegmentedControl.Item>
+							<SegmentedControl.Item value="bilibili">
+								Bilibili
+							</SegmentedControl.Item>
+						</SegmentedControl.Root>
+
+						<Text mt="2">
+							<Trans i18nKey="page.playlist.addMeting.id">歌曲 ID</Trans>
+						</Text>
+						<TextField.Root
+							placeholder={t(
+								"page.playlist.addMeting.idPlaceholder",
+								"例如: 3349444601",
+							)}
+							value={metingMusicId}
+							onChange={(e) => setMetingMusicId(e.currentTarget.value)}
+							autoFocus
+						/>
+
+						<Text mt="2">
+							<Trans i18nKey="newPlaylist.dialog.apiUrl">Meting API 地址</Trans>
+						</Text>
+						<Select.Root value={apiSource} onValueChange={setApiSource}>
+							<Select.Trigger />
+							<Select.Content>
+								{METING_API_PRESETS.map((preset) => (
+									<Select.Item key={preset.value} value={preset.value}>
+										{preset.label}
+									</Select.Item>
+								))}
+								<Select.Item value="custom">自定义</Select.Item>
+							</Select.Content>
+						</Select.Root>
+						{apiSource === "custom" && (
+							<TextField.Root
+								placeholder="api.meting.icu (自动补全)"
+								value={customApiUrl}
+								onChange={(e) => setCustomApiUrl(e.currentTarget.value)}
+							/>
+						)}
+					</Flex>
+
+					<Flex gap="3" mt="4" justify="end">
+						<Dialog.Close>
+							<Button type="button" variant="soft" color="gray">
+								<Trans i18nKey="common.dialog.cancel">取消</Trans>
+							</Button>
+						</Dialog.Close>
+						<Button
+							type="submit"
+							disabled={cannotCreateMetingMusic || isSubmitting}
+							onClick={onAddMetingMusic}
+						>
+							{isSubmitting ? (
+								<Trans i18nKey="common.dialog.submitting">提交中...</Trans>
+							) : (
+								<Trans i18nKey="common.dialog.confirm">确认</Trans>
+							)}
+						</Button>
+					</Flex>
+				</Dialog.Content>
+			</Dialog.Root>
 		</PageContainer>
 	);
 };
