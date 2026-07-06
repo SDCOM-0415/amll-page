@@ -92,7 +92,9 @@ jobs:
         run: pnpm exec wasm-pack --version
 
       - name: 构建库
-        run: pnpm build:libs
+        run: |
+          pnpm nx run-many -t build --exclude player
+          pnpm build:libs
         env:
           AMLL_GITHUB_IS_ACTION: true
 
