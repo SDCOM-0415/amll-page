@@ -641,7 +641,10 @@ export const Component: FC = () => {
 											添加本地歌曲
 										</Trans>
 									</Button>
-									<Button variant="soft" onClick={onAddMetingMusic}>
+									<Button
+										variant="soft"
+										onClick={() => setAddMetingDialogOpen(true)}
+									>
 										<PlusIcon />
 										<Trans i18nKey="page.playlist.addMetingMusic.label">
 											添加 Meting 歌曲
