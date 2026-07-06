@@ -289,100 +289,131 @@ export const Component: FC = () => {
 		playlist?.metingServer && playlist?.metingPlaylistId
 	);
 
-	const onRefreshMetingPlaylist = useCallback(async () => {
-		if (!playlist?.metingServer || !playlist?.metingPlaylistId) return;
-
-		const toastId = toast.loading("正在刷新 Meting 歌单...");
-
-		try {
-			const baseUrl =
-				playlist.metingApiUrl?.trim() || "https://api.meting.icu/api";
-			const separator = baseUrl.includes("?") ? "&" : "?";
-			const metingApiUrl = `${baseUrl}${separator}server=${playlist.metingServer}&type=playlist&id=${playlist.metingPlaylistId}`;
-			const response = await fetch(metingApiUrl);
-			if (!response.ok) {
-				throw new Error(`请求失败: ${response.status}`);
-			}
-			const data = await response.json();
-			if (!data || !Array.isArray(data) || data.length === 0) {
-				throw new Error("歌单数据为空或不存在");
-			}
-
-			const { tempAudioStore } = await import("../../states/tempAudioStore.ts");
-
-			const validSongs: Song[] = [];
-			const songIds: string[] = [];
-			const now = Date.now();
-
-			for (const songData of data) {
-				if (!songData.url) continue;
-
-				const musicUrlHash = await crypto.subtle.digest(
-					"SHA-256",
-					new TextEncoder().encode(songData.url),
-				);
-				const hashArray = Array.from(new Uint8Array(musicUrlHash));
-				const hashHex = hashArray
-					.map((b) => b.toString(16).padStart(2, "0"))
-					.join("");
-				const songId = `url-${hashHex.substring(0, 16)}`;
-
-				tempAudioStore.set(songId, songData.url);
-
-				const existing = await db.songs.get(songId);
-				if (!existing) {
-					const emptyBlob = new Blob([], { type: "audio/mpeg" });
-					const coverBlob = new Blob([], { type: "image/png" });
-					validSongs.push({
-						id: songId,
-						filePath: songData.url,
-						songName: songData.title || "Unknown Title",
-						songArtists: songData.author || "Unknown Artist",
-						songAlbum: "Unknown Album",
-						cover: coverBlob,
-						coverUrl: songData.pic,
-						file: emptyBlob,
-						duration: 0,
-						lyricFormat: songData.lrc ? "lrc" : "",
-						lyric: songData.lrc || "",
-						addTime: now,
-						accessTime: now,
-					});
-				} else {
-					await db.songs.update(songId, {
-						filePath: songData.url,
-						coverUrl: songData.pic,
-						accessTime: now,
-					});
+	const onRefreshPlaylist = useCallback(async () => {
+		if (isMetingPlaylist) {
+			// Meting 歌单刷新逻辑
+			const toastId = toast.loading("正在刷新 Meting 歌单...");
+			try {
+				const baseUrl =
+					playlist.metingApiUrl?.trim() || "https://api.meting.icu/api";
+				const separator = baseUrl.includes("?") ? "&" : "?";
+				const metingApiUrl = `${baseUrl}${separator}server=${playlist.metingServer}&type=playlist&id=${playlist.metingPlaylistId}`;
+				const response = await fetch(metingApiUrl);
+				if (!response.ok) {
+					throw new Error(`请求失败: ${response.status}`);
 				}
-				songIds.push(songId);
+				const data = await response.json();
+				if (!data || !Array.isArray(data) || data.length === 0) {
+					throw new Error("歌单数据为空或不存在");
+				}
+
+				const { tempAudioStore } = await import("../../states/tempAudioStore.ts");
+
+				const validSongs: Song[] = [];
+				const songIds: string[] = [];
+				const now = Date.now();
+
+				for (const songData of data) {
+					if (!songData.url) continue;
+
+					const musicUrlHash = await crypto.subtle.digest(
+						"SHA-256",
+						new TextEncoder().encode(songData.url),
+					);
+					const hashArray = Array.from(new Uint8Array(musicUrlHash));
+					const hashHex = hashArray
+						.map((b) => b.toString(16).padStart(2, "0"))
+						.join("");
+					const songId = `url-${hashHex.substring(0, 16)}`;
+
+					tempAudioStore.set(songId, songData.url);
+
+					const existing = await db.songs.get(songId);
+					if (!existing) {
+						const emptyBlob = new Blob([], { type: "audio/mpeg" });
+						const coverBlob = new Blob([], { type: "image/png" });
+						validSongs.push({
+							id: songId,
+							filePath: songData.url,
+							songName: songData.title || "Unknown Title",
+							songArtists: songData.author || "Unknown Artist",
+							songAlbum: "Unknown Album",
+							cover: coverBlob,
+							coverUrl: songData.pic,
+							file: emptyBlob,
+							duration: 0,
+							lyricFormat: songData.lrc ? "lrc" : "",
+							lyric: songData.lrc || "",
+							addTime: now,
+							accessTime: now,
+						});
+					} else {
+						await db.songs.update(songId, {
+							filePath: songData.url,
+							coverUrl: songData.pic,
+							accessTime: now,
+						});
+					}
+					songIds.push(songId);
+				}
+
+				if (validSongs.length > 0) {
+					await db.songs.bulkPut(validSongs);
+				}
+
+				await db.playlists.update(Number(param.id), (obj) => {
+					obj.songIds = songIds;
+					obj.updateTime = Date.now();
+				});
+
+				toast.update(toastId, {
+					render: `刷新成功，共 ${songIds.length} 首歌曲${validSongs.length > 0 ? `（新增 ${validSongs.length} 首）` : ""}`,
+					type: "success",
+					isLoading: false,
+					autoClose: 2000,
+				});
+			} catch (error) {
+				console.error("刷新 Meting 歌单失败", error);
+				toast.update(toastId, {
+					render: `刷新失败: ${error instanceof Error ? error.message : String(error)}`,
+					type: "error",
+					isLoading: false,
+					autoClose: 3000,
+				});
 			}
+		} else {
+			// 普通歌单的刷新逻辑，其实本地歌单不需要重新请求网络接口，
+			// 但是为了让用户有反馈，我们更新一下 updateTime 或重新检查一遍存在的歌曲（清理无效本地文件）
+			// 这里作为简单的本地刷新动作：
+			const toastId = toast.loading("正在刷新歌单...");
+			try {
+				if (!playlist?.songIds) {
+					throw new Error("歌单数据为空");
+				}
+				
+				// 例如：验证本地歌曲是否还存在等操作，这里只是一个示例逻辑
+				// 我们可以简单地更新时间戳
+				await db.playlists.update(Number(param.id), (obj) => {
+					obj.updateTime = Date.now();
+				});
 
-			if (validSongs.length > 0) {
-				await db.songs.bulkPut(validSongs);
+				toast.update(toastId, {
+					render: "刷新成功",
+					type: "success",
+					isLoading: false,
+					autoClose: 1000,
+				});
+			} catch (error) {
+				console.error("刷新歌单失败", error);
+				toast.update(toastId, {
+					render: `刷新失败: ${error instanceof Error ? error.message : String(error)}`,
+					type: "error",
+					isLoading: false,
+					autoClose: 3000,
+				});
 			}
-
-			await db.playlists.update(Number(param.id), (obj) => {
-				obj.songIds = songIds;
-				obj.updateTime = Date.now();
-			});
-
-			toast.update(toastId, {
-				render: `刷新成功，共 ${songIds.length} 首歌曲${validSongs.length > 0 ? `（新增 ${validSongs.length} 首）` : ""}`,
-				type: "success",
-				isLoading: false,
-				autoClose: 2000,
-			});
-		} catch (error) {
-			console.error("刷新 Meting 歌单失败", error);
-			toast.update(toastId, {
-				render: `刷新失败: ${error instanceof Error ? error.message : String(error)}`,
-				type: "error",
-				isLoading: false,
-				autoClose: 3000,
-			});
 		}
-	}, [playlist, param.id]);
+	}, [playlist, param.id, isMetingPlaylist]);
 
 	const onAddLocalMusics = useCallback(async () => {
 		const input = document.createElement("input");
@@ -646,16 +677,14 @@ export const Component: FC = () => {
 										onClick={() => setAddMetingDialogOpen(true)}
 									>
 										<PlusIcon />
-										<Trans i18nKey="page.playlist.addMetingMusic.label">
-											添加 Meting 歌曲
-										</Trans>
+										<Trans i18nKey="page.playlist.addLocalMusic.label">
+									添加 Meting 歌曲
+								</Trans>
+							</Button>
+									<Button variant="soft" onClick={onRefreshPlaylist}>
+										<ReloadIcon />
+										刷新歌单
 									</Button>
-									{isMetingPlaylist && (
-										<Button variant="soft" onClick={onRefreshMetingPlaylist}>
-											<ReloadIcon />
-											刷新歌单
-										</Button>
-									)}
 								</Flex>
 							</motion.div>
 						</Flex>
@@ -703,11 +732,9 @@ export const Component: FC = () => {
 								>
 									<PlusIcon />
 								</IconButton>
-								{isMetingPlaylist && (
-									<IconButton variant="soft" onClick={onRefreshMetingPlaylist}>
-										<ReloadIcon />
-									</IconButton>
-								)}
+								<IconButton variant="soft" onClick={onRefreshPlaylist}>
+									<ReloadIcon />
+								</IconButton>
 							</Flex>
 						</motion.div>
 					</Flex>
@@ -744,14 +771,14 @@ export const Component: FC = () => {
 			>
 				<Dialog.Content maxWidth="450px">
 					<Dialog.Title>
-						<Trans i18nKey="page.playlist.addMetingMusic.label">
+						<Trans i18nKey="page.playlist.addLocalMusic.label">
 							添加 Meting 歌曲
 						</Trans>
 					</Dialog.Title>
 
 					<Flex gap="3" direction="column">
 						<Text>
-							<Trans i18nKey="newPlaylist.dialog.metingServer">
+							<Trans i18nKey="newPlaylist.dialog.title">
 								平台 (server)
 							</Trans>
 						</Text>
@@ -772,11 +799,11 @@ export const Component: FC = () => {
 						</SegmentedControl.Root>
 
 						<Text mt="2">
-							<Trans i18nKey="page.playlist.addMeting.id">歌曲 ID</Trans>
+							<Trans i18nKey="page.playlist.addLocalMusic.label">歌曲 ID</Trans>
 						</Text>
 						<TextField.Root
 							placeholder={t(
-								"page.playlist.addMeting.idPlaceholder",
+								"page.playlist.addLocalMusic.label",
 								"例如: 3349444601",
 							)}
 							value={metingMusicId}
@@ -785,7 +812,7 @@ export const Component: FC = () => {
 						/>
 
 						<Text mt="2">
-							<Trans i18nKey="newPlaylist.dialog.apiUrl">Meting API 地址</Trans>
+							<Trans i18nKey="newPlaylist.dialog.title">Meting API 地址</Trans>
 						</Text>
 						<Select.Root value={apiSource} onValueChange={setApiSource}>
 							<Select.Trigger />
@@ -819,9 +846,9 @@ export const Component: FC = () => {
 							onClick={onAddMetingMusic}
 						>
 							{isSubmitting ? (
-								<Trans i18nKey="common.dialog.submitting">提交中...</Trans>
+								<Trans i18nKey="page.playlist.addMetingMusic.submitting">提交中...</Trans>
 							) : (
-								<Trans i18nKey="common.dialog.confirm">确认</Trans>
+								<Trans i18nKey="common.dialog.confirm">添加</Trans>
 							)}
 						</Button>
 					</Flex>
