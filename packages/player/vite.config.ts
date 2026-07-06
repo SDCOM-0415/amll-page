@@ -123,21 +123,24 @@ export default defineConfig({
 			namespaceResolution: "basename",
 		}),
 		VitePWA({
-			registerType: 'autoUpdate',
-			includeAssets: ['player.png', 'ffmpeg.wasm'],
+			registerType: "autoUpdate",
+			includeAssets: ["player.png", "ffmpeg.wasm"],
+			workbox: {
+				maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 允许最大 10MB 的静态资源被缓存 (例如 ffmpeg.wasm)
+			},
 			manifest: {
-				name: 'AMLL Player',
-				short_name: 'AMLL Player',
-				description: 'Apple Music Like Lyrics Player',
-				theme_color: '#ffffff',
+				name: "AMLL Player",
+				short_name: "AMLL Player",
+				description: "Apple Music Like Lyrics Player",
+				theme_color: "#ffffff",
 				icons: [
 					{
-						src: 'player.png',
-						sizes: '512x512',
-						type: 'image/png'
-					}
-				]
-			}
+						src: "player.png",
+						sizes: "512x512",
+						type: "image/png",
+					},
+				],
+			},
 		}),
 	],
 	resolve: {
