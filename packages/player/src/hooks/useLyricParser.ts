@@ -87,9 +87,37 @@ export const useLyricParser = (
 			let actualFormat = format;
 			let processLyricStr = lyricStr;
 
-			// 如果是meting添加进来的空格式或者其他情况，我们尝试做一些简单的补救转换(fallback)
-			// 其实meting默认将lrc格式传进来。如果在播放时依然解析失败或者格式不支持，我们可以尝试转换
-			// 这里通过异常捕获来 fallback 转换格式，或者直接在这个时机处理不支持的格式
+			if (actualFormat === "lrc" || actualFormat === "") {
+				const yrcPattern = /^\[\d+,\d+\]\(\d+,\d+,\d+\)/m;
+				const qrcPattern = /^\[\d+,\d+\]/m;
+				if (yrcPattern.test(processLyricStr)) {
+					actualFormat = "yrc";
+				} else if (
+					processLyricStr.trimStart().startsWith("<?xml") ||
+					processLyricStr.includes("<tt")
+				) {
+					actualFormat = "ttml";
+				} else if (
+					qrcPattern.test(processLyricStr) &&
+					/\(\d+,\d+\)/.test(processLyricStr) &&
+					!yrcPattern.test(processLyricStr)
+				) {
+					actualFormat = "qrc";
+				}
+			}
+
+			let embeddedTranslation = "";
+			if (actualFormat === "yrc") {
+				const translationIdx = processLyricStr.indexOf("[translation]");
+				if (translationIdx !== -1) {
+					embeddedTranslation = processLyricStr
+						.substring(translationIdx + "[translation]".length)
+						.trim();
+					processLyricStr = processLyricStr
+						.substring(0, translationIdx)
+						.trim();
+				}
+			}
 
 			try {
 				switch (actualFormat) {
@@ -159,9 +187,10 @@ export const useLyricParser = (
 				}),
 			);
 
-			if (translatedLrc) {
+			const effectiveTranslatedLrc = translatedLrc || embeddedTranslation;
+			if (effectiveTranslatedLrc) {
 				try {
-					const translatedLyricLines = parseLrc(translatedLrc);
+					const translatedLyricLines = parseLrc(effectiveTranslatedLrc);
 					for (const line of translatedLyricLines) {
 						pairLyric(
 							{
