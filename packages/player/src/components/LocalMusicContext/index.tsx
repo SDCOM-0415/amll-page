@@ -240,7 +240,8 @@ const LyricContext: FC = () => {
 
 		fetch(fetchUrl)
 			.then((res) => {
-				if (!res.ok) throw new Error(`Failed to fetch lyrics: ${res.statusText}`);
+				if (!res.ok)
+					throw new Error(`Failed to fetch lyrics: ${res.statusText}`);
 				return res.text();
 			})
 			.then((text) => {
@@ -360,7 +361,10 @@ export const LocalMusicContext: FC = () => {
 					tempUrl = song.filePath;
 				}
 
-				if (song && ((song.file instanceof Blob && song.file.size > 0) || tempUrl)) {
+				if (
+					song &&
+					((song.file instanceof Blob && song.file.size > 0) || tempUrl)
+				) {
 					try {
 						store.set(musicNameAtom, song.songName);
 						store.set(
@@ -398,7 +402,10 @@ export const LocalMusicContext: FC = () => {
 							});
 							await audioPlayer.load(file);
 						} else if (tempUrl) {
-							console.log("[LocalMusicContext] Load external URL inside restorePlaybackState:", tempUrl);
+							console.log(
+								"[LocalMusicContext] Load external URL inside restorePlaybackState:",
+								tempUrl,
+							);
 							await audioPlayer.loadSrc(tempUrl);
 						}
 
@@ -443,7 +450,10 @@ export const LocalMusicContext: FC = () => {
 				tempUrl = `https:${tempUrl}`;
 			}
 
-			if (!song || (!(song.file instanceof Blob && song.file.size > 0) && !tempUrl)) {
+			if (
+				!song ||
+				(!(song.file instanceof Blob && song.file.size > 0) && !tempUrl)
+			) {
 				toast.error("无法播放，找不到歌曲文件或网络地址。");
 				return;
 			}
@@ -492,7 +502,10 @@ export const LocalMusicContext: FC = () => {
 				});
 				await audioPlayer.load(file);
 			} else if (tempUrl) {
-				console.log("[LocalMusicContext] Load external URL inside playSongByIndex:", tempUrl);
+				console.log(
+					"[LocalMusicContext] Load external URL inside playSongByIndex:",
+					tempUrl,
+				);
 				await audioPlayer.loadSrc(tempUrl);
 			}
 

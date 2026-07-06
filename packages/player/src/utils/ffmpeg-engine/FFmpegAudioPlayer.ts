@@ -175,7 +175,9 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		this.dispatch("loadstart");
 
 		if (typeof SharedArrayBuffer === "undefined") {
-			console.warn("[Player] SharedArrayBuffer not available, using HTMLAudioElement fallback");
+			console.warn(
+				"[Player] SharedArrayBuffer not available, using HTMLAudioElement fallback",
+			);
 			await this.loadSrcFallback(url);
 			return;
 		}
@@ -240,7 +242,8 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 			};
 			const onError = () => {
 				cleanup();
-				const msg = this.fallbackAudio?.error?.message || "HTMLAudioElement error";
+				const msg =
+					this.fallbackAudio?.error?.message || "HTMLAudioElement error";
 				this.dispatch("error", msg);
 				reject(new Error(msg));
 			};
@@ -266,7 +269,11 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 	private startFallbackTimeUpdate() {
 		this.stopFallbackTimeUpdate();
 		const tick = () => {
-			if (this.isFallbackMode && this.fallbackAudio && this.playerState === "playing") {
+			if (
+				this.isFallbackMode &&
+				this.fallbackAudio &&
+				this.playerState === "playing"
+			) {
 				this.dispatch("timeupdate", this.fallbackAudio.currentTime);
 				this.fallbackTimeUpdateId = requestAnimationFrame(tick);
 			}
@@ -281,7 +288,10 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		}
 	}
 
-	private async runFetchLoopFromResponse(response: Response, totalSize: number) {
+	private async runFetchLoopFromResponse(
+		response: Response,
+		totalSize: number,
+	) {
 		if (this.fetchController) {
 			this.fetchController.abort();
 		}
@@ -339,13 +349,13 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 
 		try {
 			const safeStartOffset = Math.floor(startOffset);
-			// In this case, since cross-origin fetch for media could be strict, 
-			// we will NOT force the Range header if startOffset is 0. 
+			// In this case, since cross-origin fetch for media could be strict,
+			// we will NOT force the Range header if startOffset is 0.
 			// If we do seek later, we will use it.
 			const fetchOptions: RequestInit = {
 				signal,
 			};
-			
+
 			if (safeStartOffset > 0) {
 				fetchOptions.headers = {
 					Range: `bytes=${safeStartOffset}-`,
@@ -353,7 +363,10 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 			}
 
 			let response = await fetch(url, fetchOptions).catch(async (e) => {
-				console.warn("[Player] Fetch failed (possibly CORS or Range issue), trying fallback...", e);
+				console.warn(
+					"[Player] Fetch failed (possibly CORS or Range issue), trying fallback...",
+					e,
+				);
 				if (safeStartOffset > 0) {
 					return await fetch(url, { signal });
 				}
@@ -364,7 +377,9 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 			// 注意：此时流将从头开始给，需要在 ffmpeg 层丢弃多余数据（或其本身就会跳过）。
 			// 但这能确保我们起码能拿到数据并继续。
 			if (!response.ok && safeStartOffset > 0) {
-				console.warn("[Player] Range response not ok, falling back to full stream fetch.");
+				console.warn(
+					"[Player] Range response not ok, falling back to full stream fetch.",
+				);
 				response = await fetch(url, { signal });
 			}
 
@@ -519,7 +534,11 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 
 		if (this.isFallbackMode && this.fallbackAudio) {
 			this.fallbackAudio.volume = this.targetVolume;
-		} else if (this.masterGain && this.playerState === "playing" && this.audioCtx) {
+		} else if (
+			this.masterGain &&
+			this.playerState === "playing" &&
+			this.audioCtx
+		) {
 			this.rampGain(this.targetVolume, 0.05);
 		}
 

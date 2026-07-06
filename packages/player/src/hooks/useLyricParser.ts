@@ -113,9 +113,7 @@ export const useLyricParser = (
 					embeddedTranslation = processLyricStr
 						.substring(translationIdx + "[translation]".length)
 						.trim();
-					processLyricStr = processLyricStr
-						.substring(0, translationIdx)
-						.trim();
+					processLyricStr = processLyricStr.substring(0, translationIdx).trim();
 				}
 			}
 
@@ -160,16 +158,26 @@ export const useLyricParser = (
 					}
 				}
 			} catch (formatErr) {
-				console.warn(LYRIC_LOG_TAG, `按格式 ${actualFormat} 解析失败，尝试转换为标准 LRC`, formatErr);
+				console.warn(
+					LYRIC_LOG_TAG,
+					`按格式 ${actualFormat} 解析失败，尝试转换为标准 LRC`,
+					formatErr,
+				);
 				// 如果是未知的或无法解析的格式，尝试暴力清理文本并转换成标准的 lrc 格式，去除特殊标签等
 				// 这里实现一个简单的后备策略：尝试从不可解析文本中提取带时间戳的行
-				const fallbackLines = processLyricStr.split('\n');
+				const fallbackLines = processLyricStr.split("\n");
 				const lrcRegex = /\[\d{2,}:\d{2,}(?:\.\d+)?\]/;
-				const cleanedLrcStr = fallbackLines.filter(line => lrcRegex.test(line)).join('\n');
-				
+				const cleanedLrcStr = fallbackLines
+					.filter((line) => lrcRegex.test(line))
+					.join("\n");
+
 				if (cleanedLrcStr) {
 					parsedLyricLines = parseLrc(cleanedLrcStr);
-					console.log(LYRIC_LOG_TAG, "已回退到清理后的 LRC 解析", parsedLyricLines);
+					console.log(
+						LYRIC_LOG_TAG,
+						"已回退到清理后的 LRC 解析",
+						parsedLyricLines,
+					);
 				} else {
 					// 实在无法提取时间戳的，作为无时间戳歌词展示或者丢弃
 					console.warn(LYRIC_LOG_TAG, "无法从歌词中提取时间戳，解析失败");

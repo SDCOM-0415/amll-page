@@ -1,10 +1,10 @@
-import { Link2Icon, PlusIcon } from "@radix-ui/react-icons";
+import { PlusIcon } from "@radix-ui/react-icons";
 import {
-	Box,
 	Button,
 	Dialog,
 	Flex,
 	SegmentedControl,
+	Select,
 	Text,
 	TextField,
 } from "@radix-ui/themes";
@@ -12,14 +12,49 @@ import { type FC, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { db, type Song } from "../../dexie.ts";
-import { loadFileFromURL } from "../../utils/url-params.ts";
+
+const METING_API_PRESETS = [
+	{
+		value: "meting",
+		label: "meting.sdcom.top",
+		url: "https://meting.sdcom.top/api",
+	},
+	{
+		value: "meting-backup",
+		label: "meting-backup.sdcom.top",
+		url: "https://meting-backup.sdcom.top/api",
+	},
+	{
+		value: "api-meting",
+		label: "api.meting.icu",
+		url: "https://api.meting.icu/api",
+	},
+] as const;
+
+function normalizeApiUrl(input: string): string {
+	let url = input.trim();
+	if (!url) return METING_API_PRESETS[0].url;
+	if (!url.startsWith("http://") && !url.startsWith("https://")) {
+		url = `https://${url}`;
+	}
+	try {
+		const parsed = new URL(url);
+		if (parsed.pathname === "/" || parsed.pathname === "") {
+			parsed.pathname = "/api";
+		}
+		return parsed.toString().replace(/\/$/, "");
+	} catch {
+		return url;
+	}
+}
 
 export const NewPlaylistButton: FC = () => {
 	const [type, setType] = useState<"local" | "meting">("local");
 	const [name, setName] = useState("");
 	const [server, setServer] = useState("netease");
 	const [playlistId, setPlaylistId] = useState("");
-	const [apiUrl, setApiUrl] = useState("https://api.meting.icu/api");
+	const [apiSource, setApiSource] = useState("meting");
+	const [customApiUrl, setCustomApiUrl] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const { t } = useTranslation();
@@ -46,9 +81,12 @@ export const NewPlaylistButton: FC = () => {
 				t("page.playlist.new.meting.loading", "正在获取歌单信息..."),
 			);
 			try {
-				const baseUrl = apiUrl.trim() || "https://api.meting.icu/api";
-				const separator = baseUrl.includes("?") ? "&" : "?";
-				const metingApiUrl = `${baseUrl}${separator}server=${server}&type=playlist&id=${playlistId.trim()}`;
+				const preset = METING_API_PRESETS.find((p) => p.value === apiSource);
+				const resolvedApiUrl = preset
+					? preset.url
+					: normalizeApiUrl(customApiUrl);
+				const separator = resolvedApiUrl.includes("?") ? "&" : "?";
+				const metingApiUrl = `${resolvedApiUrl}${separator}server=${server}&type=playlist&id=${playlistId.trim()}`;
 				const response = await fetch(metingApiUrl);
 				if (!response.ok) {
 					throw new Error(`获取歌单失败: ${response.status}`);
@@ -133,6 +171,9 @@ export const NewPlaylistButton: FC = () => {
 					updateTime: Date.now(),
 					playTime: 0,
 					songIds,
+					metingServer: server,
+					metingPlaylistId: playlistId,
+					metingApiUrl: resolvedApiUrl,
 				});
 
 				toast.update(id, {
@@ -144,7 +185,7 @@ export const NewPlaylistButton: FC = () => {
 			} catch (error) {
 				console.error("获取Meting歌单失败", error);
 				toast.update(id, {
-					render: `添加失败: ${error instanceof Error ? error.message : String(error)}`,
+					render: `添加失败，请尝试切换其他 Meting API 地址重试: ${error instanceof Error ? error.message : String(error)}`,
 					type: "error",
 					isLoading: false,
 					autoClose: 3000,
@@ -254,11 +295,24 @@ export const NewPlaylistButton: FC = () => {
 									Meting API 地址
 								</Trans>
 							</Text>
-							<TextField.Root
-								placeholder="https://api.meting.icu/api"
-								value={apiUrl}
-								onChange={(e) => setApiUrl(e.currentTarget.value)}
-							/>
+							<Select.Root value={apiSource} onValueChange={setApiSource}>
+								<Select.Trigger />
+								<Select.Content>
+									{METING_API_PRESETS.map((preset) => (
+										<Select.Item key={preset.value} value={preset.value}>
+											{preset.label}
+										</Select.Item>
+									))}
+									<Select.Item value="custom">自定义</Select.Item>
+								</Select.Content>
+							</Select.Root>
+							{apiSource === "custom" && (
+								<TextField.Root
+									placeholder="api.meting.icu (自动补全)"
+									value={customApiUrl}
+									onChange={(e) => setCustomApiUrl(e.currentTarget.value)}
+								/>
+							)}
 						</>
 					)}
 				</Flex>

@@ -3,6 +3,7 @@ import {
 	Pencil1Icon,
 	PlayIcon,
 	PlusIcon,
+	ReloadIcon,
 } from "@radix-ui/react-icons";
 import {
 	Box,
@@ -219,9 +220,7 @@ export const Component: FC = () => {
 			};
 
 			// 将音频的远程 URL 存入 tempAudioStore，以便在播放时使用
-			const { tempAudioStore } = await import(
-				"../../states/tempAudioStore.ts"
-			);
+			const { tempAudioStore } = await import("../../states/tempAudioStore.ts");
 			tempAudioStore.set(songId, songData.url);
 
 			await db.songs.put(song);
@@ -241,13 +240,112 @@ export const Component: FC = () => {
 		} catch (error) {
 			console.error("添加 Meting 歌曲失败", error);
 			toast.update(toastId, {
-				render: `添加失败: ${error instanceof Error ? error.message : String(error)}`,
+				render: `添加失败，请尝试切换其他 Meting API 地址重试: ${error instanceof Error ? error.message : String(error)}`,
 				type: "error",
 				isLoading: false,
 				autoClose: 3000,
 			});
 		}
 	}, [playlist, param.id, t]);
+
+	const isMetingPlaylist = !!(
+		playlist?.metingServer && playlist?.metingPlaylistId
+	);
+
+	const onRefreshMetingPlaylist = useCallback(async () => {
+		if (!playlist?.metingServer || !playlist?.metingPlaylistId) return;
+
+		const toastId = toast.loading("正在刷新 Meting 歌单...");
+
+		try {
+			const baseUrl =
+				playlist.metingApiUrl?.trim() || "https://api.meting.icu/api";
+			const separator = baseUrl.includes("?") ? "&" : "?";
+			const metingApiUrl = `${baseUrl}${separator}server=${playlist.metingServer}&type=playlist&id=${playlist.metingPlaylistId}`;
+			const response = await fetch(metingApiUrl);
+			if (!response.ok) {
+				throw new Error(`请求失败: ${response.status}`);
+			}
+			const data = await response.json();
+			if (!data || !Array.isArray(data) || data.length === 0) {
+				throw new Error("歌单数据为空或不存在");
+			}
+
+			const { tempAudioStore } = await import("../../states/tempAudioStore.ts");
+
+			const validSongs: Song[] = [];
+			const songIds: string[] = [];
+			const now = Date.now();
+
+			for (const songData of data) {
+				if (!songData.url) continue;
+
+				const musicUrlHash = await crypto.subtle.digest(
+					"SHA-256",
+					new TextEncoder().encode(songData.url),
+				);
+				const hashArray = Array.from(new Uint8Array(musicUrlHash));
+				const hashHex = hashArray
+					.map((b) => b.toString(16).padStart(2, "0"))
+					.join("");
+				const songId = `url-${hashHex.substring(0, 16)}`;
+
+				tempAudioStore.set(songId, songData.url);
+
+				const existing = await db.songs.get(songId);
+				if (!existing) {
+					const emptyBlob = new Blob([], { type: "audio/mpeg" });
+					const coverBlob = new Blob([], { type: "image/png" });
+					validSongs.push({
+						id: songId,
+						filePath: songData.url,
+						songName: songData.title || "Unknown Title",
+						songArtists: songData.author || "Unknown Artist",
+						songAlbum: "Unknown Album",
+						cover: coverBlob,
+						coverUrl: songData.pic,
+						file: emptyBlob,
+						duration: 0,
+						lyricFormat: songData.lrc ? "lrc" : "",
+						lyric: songData.lrc || "",
+						addTime: now,
+						accessTime: now,
+					});
+				} else {
+					await db.songs.update(songId, {
+						filePath: songData.url,
+						coverUrl: songData.pic,
+						accessTime: now,
+					});
+				}
+				songIds.push(songId);
+			}
+
+			if (validSongs.length > 0) {
+				await db.songs.bulkPut(validSongs);
+			}
+
+			await db.playlists.update(Number(param.id), (obj) => {
+				obj.songIds = songIds;
+				obj.updateTime = Date.now();
+			});
+
+			toast.update(toastId, {
+				render: `刷新成功，共 ${songIds.length} 首歌曲${validSongs.length > 0 ? `（新增 ${validSongs.length} 首）` : ""}`,
+				type: "success",
+				isLoading: false,
+				autoClose: 2000,
+			});
+		} catch (error) {
+			console.error("刷新 Meting 歌单失败", error);
+			toast.update(toastId, {
+				render: `刷新失败: ${error instanceof Error ? error.message : String(error)}`,
+				type: "error",
+				isLoading: false,
+				autoClose: 3000,
+			});
+		}
+	}, [playlist, param.id]);
 
 	const onAddLocalMusics = useCallback(async () => {
 		const input = document.createElement("input");
@@ -512,52 +610,63 @@ export const Component: FC = () => {
 											添加 Meting 歌曲
 										</Trans>
 									</Button>
-								</Flex>
-							</motion.div>
-						</Flex>
-						<Flex
-							direction="column"
-							display={{
-								xs: "flex",
-								sm: "none",
-							}}
-							asChild
-						>
-							<motion.div
-								style={{
-									gap: playlistInfoGapSize,
-								}}
-							>
-								<EditablePlaylistName
-									playlistName={playlist?.name || ""}
-									onPlaylistNameChange={(newName) =>
-										db.playlists.update(Number(param.id), (obj) => {
-											obj.name = newName;
-										})
-									}
-								/>
-								<Text>
-									{t(
-										"page.playlist.totalMusicLabel",
-										"{count, plural, other {#}} 首歌曲",
-										{
-											count: playlist?.songIds?.length || 0,
-										},
+									{isMetingPlaylist && (
+										<Button variant="soft" onClick={onRefreshMetingPlaylist}>
+											<ReloadIcon />
+											刷新歌单
+										</Button>
 									)}
-								</Text>
-								<Flex gap="2">
-									<IconButton onClick={() => onPlaylistDefault()}>
-										<PlayIcon />
-									</IconButton>
-									<IconButton variant="soft" onClick={onAddLocalMusics}>
-										<PlusIcon />
-									</IconButton>
-									<IconButton variant="soft" onClick={onAddMetingMusic}>
-										<PlusIcon />
-									</IconButton>
 								</Flex>
 							</motion.div>
 						</Flex>
+					</Flex>
+					<Flex
+						direction="column"
+						display={{
+							xs: "flex",
+							sm: "none",
+						}}
+						asChild
+					>
+						<motion.div
+							style={{
+								gap: playlistInfoGapSize,
+							}}
+						>
+							<EditablePlaylistName
+								playlistName={playlist?.name || ""}
+								onPlaylistNameChange={(newName) =>
+									db.playlists.update(Number(param.id), (obj) => {
+										obj.name = newName;
+									})
+								}
+							/>
+							<Text>
+								{t(
+									"page.playlist.totalMusicLabel",
+									"{count, plural, other {#}} 首歌曲",
+									{
+										count: playlist?.songIds?.length || 0,
+									},
+								)}
+							</Text>
+							<Flex gap="2">
+								<IconButton onClick={() => onPlaylistDefault()}>
+									<PlayIcon />
+								</IconButton>
+								<IconButton variant="soft" onClick={onAddLocalMusics}>
+									<PlusIcon />
+								</IconButton>
+								<IconButton variant="soft" onClick={onAddMetingMusic}>
+									<PlusIcon />
+								</IconButton>
+								{isMetingPlaylist && (
+									<IconButton variant="soft" onClick={onRefreshMetingPlaylist}>
+										<ReloadIcon />
+									</IconButton>
+								)}
+							</Flex>
+						</motion.div>
 					</Flex>
 				</Flex>
 				<Box

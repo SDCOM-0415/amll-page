@@ -21,7 +21,10 @@ export const PlaylistCover: FC<
 			const result = [];
 			for (const songId of playlist.songIds) {
 				const song = await db.songs.get(songId);
-				if (song?.cover.type.startsWith("image") && song.cover.size > 0) {
+				if (
+					(song?.cover.type.startsWith("image") && song.cover.size > 0) ||
+					song?.coverUrl
+				) {
 					result.push(song);
 					if (result.length === 4) break;
 				}
@@ -42,13 +45,17 @@ export const PlaylistCover: FC<
 			};
 		}
 		if (firstFourSongs) {
-			const imgs = firstFourSongs.map((v) => URL.createObjectURL(v.cover));
+			const imgs = firstFourSongs.map((v) =>
+				v.coverUrl ? v.coverUrl : URL.createObjectURL(v.cover),
+			);
 
 			setPlaylistImgs(imgs);
 
 			return () => {
-				for (const img of imgs) {
-					URL.revokeObjectURL(img);
+				for (const [i, img] of imgs.entries()) {
+					if (!firstFourSongs[i].coverUrl) {
+						URL.revokeObjectURL(img);
+					}
 				}
 			};
 		}

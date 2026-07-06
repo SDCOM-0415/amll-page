@@ -10,6 +10,9 @@ export interface Playlist {
 	updateTime: number;
 	playTime: number;
 	songIds: string[];
+	metingServer?: string;
+	metingPlaylistId?: string;
+	metingApiUrl?: string;
 }
 
 export interface Song {
