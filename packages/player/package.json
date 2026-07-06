@@ -60,7 +60,8 @@
 		"vite-plugin-lightningcss": "^0.0.5",
 		"vite-plugin-svgr": "catalog:",
 		"vite-plugin-top-level-await": "^1.6.0",
-		"vite-plugin-wasm": "catalog:"
+		"vite-plugin-wasm": "catalog:",
+		"workbox-window": "^7.4.1"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
