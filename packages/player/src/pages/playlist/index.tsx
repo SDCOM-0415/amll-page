@@ -192,6 +192,7 @@ export const Component: FC = () => {
 	const [apiSource, setApiSource] = useState("meting");
 	const [customApiUrl, setCustomApiUrl] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isRefreshing, setIsRefreshing] = useState(false);
 
 	const cannotCreateMetingMusic = useMemo(() => {
 		return (
@@ -297,6 +298,8 @@ export const Component: FC = () => {
 	);
 
 	const onRefreshPlaylist = useCallback(async () => {
+		if (isRefreshing) return;
+		setIsRefreshing(true);
 		if (isMetingPlaylist) {
 			const toastId = toast.loading("正在重新拉取 Meting 歌单...");
 			try {
@@ -393,6 +396,8 @@ export const Component: FC = () => {
 					isLoading: false,
 					autoClose: 3000,
 				});
+			} finally {
+				setIsRefreshing(false);
 			}
 		} else {
 			const toastId = toast.loading("正在刷新本地歌单...");
@@ -426,9 +431,11 @@ export const Component: FC = () => {
 					isLoading: false,
 					autoClose: 3000,
 				});
+			} finally {
+				setIsRefreshing(false);
 			}
 		}
-	}, [playlist, param.id, isMetingPlaylist]);
+	}, [playlist, param.id, isMetingPlaylist, isRefreshing]);
 
 	const onAddLocalMusics = useCallback(async () => {
 		const input = document.createElement("input");
@@ -696,8 +703,8 @@ export const Component: FC = () => {
 										添加 Meting 歌曲
 									</Trans>
 								</Button>
-								<Button variant="soft" onClick={onRefreshPlaylist}>
-									<ReloadIcon />
+								<Button variant="soft" onClick={onRefreshPlaylist} loading={isRefreshing}>
+									<ReloadIcon className={isRefreshing ? styles.spinning : ""} />
 									刷新歌单
 								</Button>
 								</Flex>
@@ -750,8 +757,8 @@ export const Component: FC = () => {
 								>
 									<PlusIcon />
 								</IconButton>
-								<IconButton variant="soft" onClick={onRefreshPlaylist}>
-									<ReloadIcon />
+								<IconButton variant="soft" onClick={onRefreshPlaylist} loading={isRefreshing}>
+									<ReloadIcon className={isRefreshing ? styles.spinning : ""} />
 								</IconButton>
 							</Flex>
 						</motion.div>
