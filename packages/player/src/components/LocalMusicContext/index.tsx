@@ -227,6 +227,17 @@ const LyricContext: FC = () => {
 		let cancelled = false;
 		const fetchUrl = raw.startsWith("//") ? `https:${raw}` : raw;
 
+		let urlFormat = "";
+		try {
+			const urlObj = new URL(fetchUrl);
+			const typeParam = urlObj.searchParams.get("type");
+			if (typeParam) {
+				urlFormat = typeParam;
+			}
+		} catch {
+			// URL 解析失败时忽略
+		}
+
 		fetch(fetchUrl)
 			.then((res) => {
 				if (!res.ok) throw new Error(`Failed to fetch lyrics: ${res.statusText}`);
@@ -235,7 +246,7 @@ const LyricContext: FC = () => {
 			.then((text) => {
 				if (cancelled) return;
 				const trimmed = text.trim();
-				let format = "lrc";
+				let format = urlFormat || "lrc";
 				if (trimmed.startsWith("<?xml") || trimmed.includes("<tt")) {
 					format = "ttml";
 				}
