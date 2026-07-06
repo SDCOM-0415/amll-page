@@ -134,8 +134,14 @@
 .bigControls {
 	grid-row: bottom-controls;
 	grid-column: 1 / 2;
-	transition: opacity 0.3s ease-out;
+	transition:
+		opacity 0.35s ease,
+		transform 0.35s ease,
+		max-height 0.35s ease,
+		padding-top 0.35s ease,
+		padding-bottom 0.35s ease;
 	opacity: 0;
+	transform: translateY(16px);
 	mix-blend-mode: plus-lighter;
 	min-width: 0;
 	z-index: 2;
@@ -168,19 +174,22 @@
 
 	.bigControls {
 		opacity: 1;
-		max-height: none;
+		transform: translateY(0);
+		max-height: 40vh;
 		pointer-events: auto;
+		padding-top: 0.5em;
+		padding-bottom: max(1em, env(safe-area-inset-bottom));
 	}
 }
 
 .showControlsOverlay {
 	.bigControls {
 		opacity: 1;
-		max-height: none;
+		transform: translateY(0);
+		max-height: 40vh;
 		pointer-events: auto;
-		transition:
-			opacity 0.3s ease-out,
-			max-height 0.3s ease-out;
+		padding-top: 0.5em;
+		padding-bottom: max(1em, env(safe-area-inset-bottom));
 	}
 }
 
