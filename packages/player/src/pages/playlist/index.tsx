@@ -298,15 +298,17 @@ export const Component: FC = () => {
 	);
 
 	const onRefreshPlaylist = useCallback(async () => {
+		console.log("触发刷新歌单", { isRefreshing, isMetingPlaylist, playlist });
 		if (isRefreshing) return;
 		setIsRefreshing(true);
 		if (isMetingPlaylist) {
 			const toastId = toast.loading("正在重新拉取 Meting 歌单...");
 			try {
 				const baseUrl =
-					playlist.metingApiUrl?.trim() || "https://api.meting.icu/api";
+					playlist?.metingApiUrl?.trim() || "https://api.meting.icu/api";
 				const separator = baseUrl.includes("?") ? "&" : "?";
-				const metingApiUrl = `${baseUrl}${separator}server=${playlist.metingServer}&type=playlist&id=${playlist.metingPlaylistId}&r=${Date.now()}`;
+				const metingApiUrl = `${baseUrl}${separator}server=${playlist?.metingServer}&type=playlist&id=${playlist?.metingPlaylistId}&r=${Date.now()}`;
+				console.log("即将请求 API:", metingApiUrl);
 				const response = await fetch(metingApiUrl, {
 					cache: "no-store",
 					headers: {
@@ -314,10 +316,12 @@ export const Component: FC = () => {
 						Pragma: "no-cache",
 					},
 				});
+				console.log(`获取到 API 响应: 状态码 ${response.status}`, response);
 				if (!response.ok) {
 					throw new Error(`请求失败: ${response.status}`);
 				}
 				const data = await response.json();
+				console.log("解析到的 JSON 歌单列表:", data);
 				if (!data || !Array.isArray(data) || data.length === 0) {
 					throw new Error("歌单数据为空或不存在");
 				}
@@ -373,13 +377,15 @@ export const Component: FC = () => {
 					songIds.push(songId);
 				}
 
+				console.log(`准备更新 ${songsToPut.length} 首歌曲到 songs 集合...`);
 				if (songsToPut.length > 0) {
 					await db.songs.bulkPut(songsToPut);
 				}
 
-				await db.playlists.update(Number(param.id), (obj) => {
-					obj.songIds = songIds;
-					obj.updateTime = now;
+				console.log(`准备更新歌单 ID 列表... (共 ${songIds.length} 首)`);
+				await db.playlists.update(Number(param.id), {
+					songIds: songIds,
+					updateTime: now,
 				});
 
 				toast.update(toastId, {
@@ -388,6 +394,7 @@ export const Component: FC = () => {
 					isLoading: false,
 					autoClose: 2500,
 				});
+				console.log("歌单刷新更新事务完成!");
 			} catch (error) {
 				console.error("刷新 Meting 歌单失败", error);
 				toast.update(toastId, {
@@ -412,9 +419,9 @@ export const Component: FC = () => {
 					if (song) existingSongIds.push(songId);
 				}
 
-				await db.playlists.update(Number(param.id), (obj) => {
-					obj.songIds = existingSongIds;
-					obj.updateTime = Date.now();
+				await db.playlists.update(Number(param.id), {
+					songIds: existingSongIds,
+					updateTime: Date.now(),
 				});
 
 				toast.update(toastId, {
