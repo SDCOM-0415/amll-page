@@ -214,8 +214,14 @@ export const Component: FC = () => {
 				: normalizeApiUrl(customApiUrl);
 
 			const separator = resolvedApiUrl.includes("?") ? "&" : "?";
-			const metingApiUrl = `${resolvedApiUrl}${separator}server=${metingServer}&type=song&id=${metingMusicId.trim()}&r=${Math.random()}`;
-			const response = await fetch(metingApiUrl);
+			const metingApiUrl = `${resolvedApiUrl}${separator}server=${metingServer}&type=song&id=${metingMusicId.trim()}&r=${Date.now()}`;
+			const response = await fetch(metingApiUrl, {
+				cache: "no-store",
+				headers: {
+					"Cache-Control": "no-cache",
+					Pragma: "no-cache",
+				},
+			});
 			if (!response.ok) {
 				throw new Error(`请求失败: ${response.status}`);
 			}
@@ -297,7 +303,7 @@ export const Component: FC = () => {
 				const baseUrl =
 					playlist.metingApiUrl?.trim() || "https://api.meting.icu/api";
 				const separator = baseUrl.includes("?") ? "&" : "?";
-				const metingApiUrl = `${baseUrl}${separator}server=${playlist.metingServer}&type=playlist&id=${playlist.metingPlaylistId}&r=${Math.random()}`;
+				const metingApiUrl = `${baseUrl}${separator}server=${playlist.metingServer}&type=playlist&id=${playlist.metingPlaylistId}&r=${Date.now()}`;
 				const response = await fetch(metingApiUrl, {
 					cache: "no-store",
 					headers: {
@@ -370,7 +376,7 @@ export const Component: FC = () => {
 
 				await db.playlists.update(Number(param.id), (obj) => {
 					obj.songIds = songIds;
-					obj.updateTime = Date.now();
+					obj.updateTime = now;
 				});
 
 				toast.update(toastId, {
