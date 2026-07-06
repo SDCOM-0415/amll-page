@@ -86,7 +86,7 @@ export const NewPlaylistButton: FC = () => {
 					? preset.url
 					: normalizeApiUrl(customApiUrl);
 				const separator = resolvedApiUrl.includes("?") ? "&" : "?";
-				const metingApiUrl = `${resolvedApiUrl}${separator}server=${server}&type=playlist&id=${playlistId.trim()}`;
+				const metingApiUrl = `${resolvedApiUrl}${separator}server=${server}&type=playlist&id=${playlistId.trim()}&r=${Math.random()}`;
 				const response = await fetch(metingApiUrl);
 				if (!response.ok) {
 					throw new Error(`获取歌单失败: ${response.status}`);

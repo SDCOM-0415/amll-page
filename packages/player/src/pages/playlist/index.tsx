@@ -214,7 +214,7 @@ export const Component: FC = () => {
 				: normalizeApiUrl(customApiUrl);
 
 			const separator = resolvedApiUrl.includes("?") ? "&" : "?";
-			const metingApiUrl = `${resolvedApiUrl}${separator}server=${metingServer}&type=song&id=${metingMusicId.trim()}`;
+			const metingApiUrl = `${resolvedApiUrl}${separator}server=${metingServer}&type=song&id=${metingMusicId.trim()}&r=${Math.random()}`;
 			const response = await fetch(metingApiUrl);
 			if (!response.ok) {
 				throw new Error(`请求失败: ${response.status}`);
@@ -292,14 +292,19 @@ export const Component: FC = () => {
 
 	const onRefreshPlaylist = useCallback(async () => {
 		if (isMetingPlaylist) {
-			// Meting 歌单刷新逻辑
-			const toastId = toast.loading("正在刷新 Meting 歌单...");
+			const toastId = toast.loading("正在重新拉取 Meting 歌单...");
 			try {
 				const baseUrl =
 					playlist.metingApiUrl?.trim() || "https://api.meting.icu/api";
 				const separator = baseUrl.includes("?") ? "&" : "?";
-				const metingApiUrl = `${baseUrl}${separator}server=${playlist.metingServer}&type=playlist&id=${playlist.metingPlaylistId}`;
-				const response = await fetch(metingApiUrl);
+				const metingApiUrl = `${baseUrl}${separator}server=${playlist.metingServer}&type=playlist&id=${playlist.metingPlaylistId}&r=${Math.random()}`;
+				const response = await fetch(metingApiUrl, {
+					cache: "no-store",
+					headers: {
+						"Cache-Control": "no-cache",
+						Pragma: "no-cache",
+					},
+				});
 				if (!response.ok) {
 					throw new Error(`请求失败: ${response.status}`);
 				}
@@ -310,9 +315,11 @@ export const Component: FC = () => {
 
 				const { tempAudioStore } = await import("../../states/tempAudioStore.ts");
 
-				const validSongs: Song[] = [];
+				const songsToPut: Song[] = [];
 				const songIds: string[] = [];
 				const now = Date.now();
+				let addedCount = 0;
+				let updatedCount = 0;
 
 				for (const songData of data) {
 					if (!songData.url) continue;
@@ -330,36 +337,35 @@ export const Component: FC = () => {
 					tempAudioStore.set(songId, songData.url);
 
 					const existing = await db.songs.get(songId);
-					if (!existing) {
-						const emptyBlob = new Blob([], { type: "audio/mpeg" });
-						const coverBlob = new Blob([], { type: "image/png" });
-						validSongs.push({
-							id: songId,
-							filePath: songData.url,
-							songName: songData.title || "Unknown Title",
-							songArtists: songData.author || "Unknown Artist",
-							songAlbum: "Unknown Album",
-							cover: coverBlob,
-							coverUrl: songData.pic,
-							file: emptyBlob,
-							duration: 0,
-							lyricFormat: songData.lrc ? "lrc" : "",
-							lyric: songData.lrc || "",
-							addTime: now,
-							accessTime: now,
-						});
-					} else {
-						await db.songs.update(songId, {
-							filePath: songData.url,
-							coverUrl: songData.pic,
-							accessTime: now,
-						});
-					}
+					const emptyBlob = existing?.file || new Blob([], { type: "audio/mpeg" });
+					const coverBlob = existing?.cover || new Blob([], { type: "image/png" });
+
+					songsToPut.push({
+						id: songId,
+						filePath: songData.url,
+						songName: songData.title || existing?.songName || "Unknown Title",
+						songArtists: songData.author || existing?.songArtists || "Unknown Artist",
+						songAlbum: existing?.songAlbum || "Unknown Album",
+						cover: coverBlob,
+						coverUrl: songData.pic || existing?.coverUrl,
+						file: emptyBlob,
+						duration: existing?.duration || 0,
+						lyricFormat: songData.lrc ? "lrc" : existing?.lyricFormat || "",
+						lyric: songData.lrc || existing?.lyric || "",
+						translatedLrc: existing?.translatedLrc,
+						romanLrc: existing?.romanLrc,
+						addTime: existing?.addTime || now,
+						accessTime: now,
+						lyricOffset: existing?.lyricOffset,
+					});
+
+					if (existing) updatedCount += 1;
+					else addedCount += 1;
 					songIds.push(songId);
 				}
 
-				if (validSongs.length > 0) {
-					await db.songs.bulkPut(validSongs);
+				if (songsToPut.length > 0) {
+					await db.songs.bulkPut(songsToPut);
 				}
 
 				await db.playlists.update(Number(param.id), (obj) => {
@@ -368,10 +374,10 @@ export const Component: FC = () => {
 				});
 
 				toast.update(toastId, {
-					render: `刷新成功，共 ${songIds.length} 首歌曲${validSongs.length > 0 ? `（新增 ${validSongs.length} 首）` : ""}`,
+					render: `刷新成功，共 ${songIds.length} 首歌曲（新增 ${addedCount} 首，更新 ${updatedCount} 首）`,
 					type: "success",
 					isLoading: false,
-					autoClose: 2000,
+					autoClose: 2500,
 				});
 			} catch (error) {
 				console.error("刷新 Meting 歌单失败", error);
@@ -383,26 +389,28 @@ export const Component: FC = () => {
 				});
 			}
 		} else {
-			// 普通歌单的刷新逻辑，其实本地歌单不需要重新请求网络接口，
-			// 但是为了让用户有反馈，我们更新一下 updateTime 或重新检查一遍存在的歌曲（清理无效本地文件）
-			// 这里作为简单的本地刷新动作：
-			const toastId = toast.loading("正在刷新歌单...");
+			const toastId = toast.loading("正在刷新本地歌单...");
 			try {
 				if (!playlist?.songIds) {
 					throw new Error("歌单数据为空");
 				}
-				
-				// 例如：验证本地歌曲是否还存在等操作，这里只是一个示例逻辑
-				// 我们可以简单地更新时间戳
+
+				const existingSongIds: string[] = [];
+				for (const songId of playlist.songIds) {
+					const song = await db.songs.get(songId);
+					if (song) existingSongIds.push(songId);
+				}
+
 				await db.playlists.update(Number(param.id), (obj) => {
+					obj.songIds = existingSongIds;
 					obj.updateTime = Date.now();
 				});
 
 				toast.update(toastId, {
-					render: "刷新成功",
+					render: `本地歌单已刷新，保留 ${existingSongIds.length} 首歌曲`,
 					type: "success",
 					isLoading: false,
-					autoClose: 1000,
+					autoClose: 1500,
 				});
 			} catch (error) {
 				console.error("刷新歌单失败", error);
@@ -554,12 +562,12 @@ export const Component: FC = () => {
 	);
 
 	const onPlaylistDefault = useCallback(onPlayList.bind(null, 0), [onPlayList]);
-	const onPlaylistShuffle = useMemo(
-		() => () => {
-			/* TODO */
-		},
-		[],
-	);
+	const onPlaylistShuffle = useCallback(() => {
+		if (playlist === undefined) return;
+		const shuffledIds = [...playlist.songIds].sort(() => Math.random() - 0.5);
+		setQueue(shuffledIds);
+		playSongByIndex(0);
+	}, [playlist, setQueue, playSongByIndex]);
 
 	return (
 		<PageContainer>
