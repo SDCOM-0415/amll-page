@@ -248,20 +248,20 @@ export const NewPlaylistButton: FC = () => {
 									平台 (server)
 								</Trans>
 							</Text>
-							<SegmentedControl.Root value={server} onValueChange={setServer}>
-								<SegmentedControl.Item value="netease">
-									Netease
-								</SegmentedControl.Item>
-								<SegmentedControl.Item value="tencent">
-									Tencent
-								</SegmentedControl.Item>
-								<SegmentedControl.Item value="kugou">
-									Kugou
-								</SegmentedControl.Item>
-								<SegmentedControl.Item value="bilibili">
-									Bilibili
-								</SegmentedControl.Item>
-							</SegmentedControl.Root>
+							<SegmentedControl.Root value={server} onValueChange={setServer} size="1">
+							<SegmentedControl.Item value="netease">
+								Netease
+							</SegmentedControl.Item>
+							<SegmentedControl.Item value="tencent">
+								Tencent
+							</SegmentedControl.Item>
+							<SegmentedControl.Item value="kugou">
+								Kugou
+							</SegmentedControl.Item>
+							<SegmentedControl.Item value="bilibili">
+								Bilibili
+							</SegmentedControl.Item>
+						</SegmentedControl.Root>
 
 							<Text mt="2">
 								<Trans i18nKey="newPlaylist.dialog.metingId">歌单 ID</Trans>

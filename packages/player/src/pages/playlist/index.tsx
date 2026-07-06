@@ -4,6 +4,7 @@ import {
 	PlayIcon,
 	PlusIcon,
 	ReloadIcon,
+	ShuffleIcon,
 } from "@radix-ui/react-icons";
 import {
 	Box,
@@ -656,11 +657,11 @@ export const Component: FC = () => {
 										},
 									)}
 								</Text>
-								<Flex gap="2">
-									<Button onClick={() => onPlaylistDefault()}>
-										<PlayIcon />
-										<Trans i18nKey="page.playlist.playAll">播放全部</Trans>
-									</Button>
+								<Flex gap="2" wrap="wrap">
+								<Button onClick={() => onPlaylistDefault()}>
+									<PlayIcon />
+									<Trans i18nKey="page.playlist.playAll">播放全部</Trans>
+								</Button>
 									<Button variant="soft" onClick={onPlaylistShuffle}>
 										<Trans i18nKey="page.playlist.shufflePlayAll">
 											随机播放
@@ -673,18 +674,18 @@ export const Component: FC = () => {
 										</Trans>
 									</Button>
 									<Button
-										variant="soft"
-										onClick={() => setAddMetingDialogOpen(true)}
-									>
-										<PlusIcon />
-										<Trans i18nKey="page.playlist.addLocalMusic.label">
-									添加 Meting 歌曲
-								</Trans>
-							</Button>
-									<Button variant="soft" onClick={onRefreshPlaylist}>
-										<ReloadIcon />
-										刷新歌单
-									</Button>
+									variant="soft"
+									onClick={() => setAddMetingDialogOpen(true)}
+								>
+									<PlusIcon />
+									<Trans i18nKey="page.playlist.addLocalMusic.label">
+										添加 Meting 歌曲
+									</Trans>
+								</Button>
+								<Button variant="soft" onClick={onRefreshPlaylist}>
+									<ReloadIcon />
+									刷新歌单
+								</Button>
 								</Flex>
 							</motion.div>
 						</Flex>
@@ -719,9 +720,12 @@ export const Component: FC = () => {
 									},
 								)}
 							</Text>
-							<Flex gap="2">
+							<Flex gap="2" wrap="wrap">
 								<IconButton onClick={() => onPlaylistDefault()}>
 									<PlayIcon />
+								</IconButton>
+								<IconButton variant="soft" onClick={onPlaylistShuffle}>
+									<ShuffleIcon />
 								</IconButton>
 								<IconButton variant="soft" onClick={onAddLocalMusics}>
 									<PlusIcon />
@@ -785,6 +789,7 @@ export const Component: FC = () => {
 						<SegmentedControl.Root
 							value={metingServer}
 							onValueChange={setMetingServer}
+							size="1"
 						>
 							<SegmentedControl.Item value="netease">
 								Netease
