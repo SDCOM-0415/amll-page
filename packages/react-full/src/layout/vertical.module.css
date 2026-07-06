@@ -5,15 +5,11 @@
 	min-width: 0;
 	overflow: hidden;
 	display: grid;
-	/* 保证可以拖动窗口的区域 */
 	grid-template-rows:
 		[drag-area] 30px
-		/* 控制条的空间 */
 		[thumb] 30px
-		/* 主视图，包括是否展示歌词的两种布局 */
 		[main-view] 1fr
-		/* 主要控制栏的区域 */
-		[control] 0fr;
+		[bottom-controls] auto;
 	gap: 2px;
 }
 
@@ -126,30 +122,31 @@
 	grid-row: lyric-view;
 	grid-column: 1 / 5;
 
-	/* border: 1px solid blue; */
-
 	transition: opacity 0.5s 0.5s;
 	opacity: 1;
 	mix-blend-mode: plus-lighter;
-	/* contain: paint; */
 
-	mask-image: linear-gradient(transparent 0%, black 10%, black 100%);
-	/* margin-left: calc(-24px - 1em); */
-	/* width: calc(100% + 24px + 1em); */
+	mask-image: linear-gradient(transparent 0%, black 10%, black 90%, transparent 100%);
 	box-sizing: content-box;
 	min-height: 0;
 }
 
 .bigControls {
-	grid-row: lyric-view;
-	grid-column: 2 / 3;
-
-	/* border: 1px solid red; */
-	transition: opacity 0.5s;
+	grid-row: bottom-controls;
+	grid-column: 1 / 2;
+	transition: opacity 0.3s ease-out;
 	opacity: 0;
 	mix-blend-mode: plus-lighter;
 	min-width: 0;
 	z-index: 2;
+	pointer-events: none;
+	max-height: 0;
+	overflow: hidden;
+	padding: 0 2em;
+
+	@media screen and (max-width: 480px) {
+		padding: 0 1.2em;
+	}
 }
 
 .hideLyric {
@@ -171,6 +168,19 @@
 
 	.bigControls {
 		opacity: 1;
+		max-height: none;
+		pointer-events: auto;
+	}
+}
+
+.showControlsOverlay {
+	.bigControls {
+		opacity: 1;
+		max-height: none;
+		pointer-events: auto;
+		transition:
+			opacity 0.3s ease-out,
+			max-height 0.3s ease-out;
 	}
 }
 

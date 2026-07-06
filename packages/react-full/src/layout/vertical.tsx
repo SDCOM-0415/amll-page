@@ -20,6 +20,8 @@ export const VerticalLayout: React.FC<
 		asChild?: boolean;
 		hideLyric?: boolean;
 		immerseCover?: boolean;
+		showControlsOverlay?: boolean;
+		onTouchInteraction?: () => void;
 	} & HTMLProps<HTMLDivElement>
 > = ({
 	thumbSlot,
@@ -31,6 +33,8 @@ export const VerticalLayout: React.FC<
 	asChild,
 	className,
 	immerseCover,
+	showControlsOverlay,
+	onTouchInteraction,
 	...rest
 }) => {
 	const rootRef = useRef<HTMLDivElement>(null);
@@ -120,8 +124,11 @@ export const VerticalLayout: React.FC<
 				className,
 				!asChild && styles.verticalLayout,
 				!asChild && hideLyric && styles.hideLyric,
+				!asChild && showControlsOverlay && !hideLyric && styles.showControlsOverlay,
 			)}
 			ref={rootRef}
+			onTouchStart={onTouchInteraction}
+			onClick={onTouchInteraction}
 			{...rest}
 		>
 			<div className={styles.thumb}>{thumbSlot}</div>
@@ -134,8 +141,8 @@ export const VerticalLayout: React.FC<
 			<div className={styles.noLyricLayout}>
 				{/** 用于占位，测量布局的大小用 */}
 				<div className={styles.phonyBigCover} ref={phonyBigCoverRef} />
-				<div className={styles.bigControls}>{bigControlsSlot}</div>
 			</div>
+			<div className={styles.bigControls}>{bigControlsSlot}</div>
 			{currentCoverStyle && (
 				<motion.div
 					className={classNames(

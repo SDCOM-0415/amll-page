@@ -17,6 +17,7 @@ import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
 	type FC,
 	type HTMLProps,
+	useCallback,
 	useEffect,
 	useLayoutEffect,
 	useMemo,
@@ -504,6 +505,62 @@ export const PrebuiltLyricPlayer: FC<HTMLProps<HTMLDivElement>> = ({
 	const backgroundRenderer = useAtomValue(lyricBackgroundRendererAtom);
 	const showBottomControl = useAtomValue(showBottomControlAtom);
 
+	const [showControlsOverlay, setShowControlsOverlay] = useState(false);
+	const controlsOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const triggerShowControls = useCallback(() => {
+		if (!isVertical || hideLyricView) return;
+		setShowControlsOverlay(true);
+		if (controlsOverlayTimerRef.current) {
+			clearTimeout(controlsOverlayTimerRef.current);
+		}
+		if (musicIsPlaying) {
+			controlsOverlayTimerRef.current = setTimeout(() => {
+				setShowControlsOverlay(false);
+				controlsOverlayTimerRef.current = null;
+			}, 3000);
+		}
+	}, [isVertical, hideLyricView, musicIsPlaying]);
+
+	useEffect(() => {
+		return () => {
+			if (controlsOverlayTimerRef.current) {
+				clearTimeout(controlsOverlayTimerRef.current);
+			}
+		};
+	}, []);
+
+	useEffect(() => {
+		if (hideLyricView) {
+			setShowControlsOverlay(false);
+			if (controlsOverlayTimerRef.current) {
+				clearTimeout(controlsOverlayTimerRef.current);
+				controlsOverlayTimerRef.current = null;
+			}
+		}
+	}, [hideLyricView]);
+
+	useEffect(() => {
+		if (!isVertical || hideLyricView) return;
+		if (!musicIsPlaying) {
+			setShowControlsOverlay(true);
+			if (controlsOverlayTimerRef.current) {
+				clearTimeout(controlsOverlayTimerRef.current);
+				controlsOverlayTimerRef.current = null;
+			}
+		} else {
+			if (showControlsOverlay) {
+				if (controlsOverlayTimerRef.current) {
+					clearTimeout(controlsOverlayTimerRef.current);
+				}
+				controlsOverlayTimerRef.current = setTimeout(() => {
+					setShowControlsOverlay(false);
+					controlsOverlayTimerRef.current = null;
+				}, 3000);
+			}
+		}
+	}, [musicIsPlaying, isVertical, hideLyricView]);
+
 	const [isHoveringTitlebar, setIsHoveringTitlebar] = useState(false);
 	const [isGracePeriodOver, setIsGracePeriodOver] = useState(false);
 
@@ -589,6 +646,8 @@ export const PrebuiltLyricPlayer: FC<HTMLProps<HTMLDivElement>> = ({
 				className={classNames(styles.autoLyricLayout, className)}
 				onLayoutChange={setIsVertical}
 				verticalImmerseCover={verticalImmerseCover}
+				showControlsOverlay={showControlsOverlay}
+				onTouchInteraction={triggerShowControls}
 				coverSlot={
 					<Cover
 						coverUrl={musicCover}

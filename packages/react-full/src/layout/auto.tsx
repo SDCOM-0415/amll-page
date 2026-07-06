@@ -20,6 +20,8 @@ export const AutoLyricLayout: React.FC<
 		backgroundSlot?: React.ReactNode;
 		hideLyric?: boolean;
 		verticalImmerseCover?: boolean;
+		showControlsOverlay?: boolean;
+		onTouchInteraction?: () => void;
 		onLayoutChange?: (isVertical: boolean) => void;
 		onElementMounted?: (node: HTMLDivElement | null) => void;
 	} & HTMLProps<HTMLDivElement>
@@ -34,6 +36,8 @@ export const AutoLyricLayout: React.FC<
 	backgroundSlot,
 	hideLyric,
 	verticalImmerseCover,
+	showControlsOverlay,
+	onTouchInteraction,
 	onLayoutChange,
 	onElementMounted,
 	...rest
@@ -86,6 +90,8 @@ export const AutoLyricLayout: React.FC<
 					lyricSlot={lyricSlot}
 					hideLyric={hideLyric}
 					immerseCover={verticalImmerseCover}
+					showControlsOverlay={showControlsOverlay}
+					onTouchInteraction={onTouchInteraction}
 				/>
 			) : (
 				<HorizontalLayout
