@@ -2,9 +2,12 @@ import { Provider } from "jotai";
 import { createRoot } from "react-dom/client";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import "react-toastify/dist/ReactToastify.css";
+import { registerSW } from "virtual:pwa-register";
 import App from "./App.tsx";
 import "./i18n";
 import "./styles.css";
+
+registerSW({ immediate: true });
 
 const ErrorRender = (props: FallbackProps) => {
 	console.error(props.error);

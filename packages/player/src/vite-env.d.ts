@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 /// <reference types="vite-plugin-svgr/client" />
 /// <reference types="vite-plugin-i18next-loader/vite" />
+/// <reference types="vite-plugin-pwa/client" />
 
 declare module "md5" {
 	export default function md5(message: string | Buffer): string;

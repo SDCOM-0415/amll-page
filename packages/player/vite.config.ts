@@ -6,6 +6,7 @@ import jotaiReactRefresh from "jotai/babel/plugin-react-refresh";
 import { defineConfig, type Plugin } from "vite";
 import i18nextLoader from "vite-plugin-i18next-loader";
 import lightningcss from "vite-plugin-lightningcss";
+import { VitePWA } from "vite-plugin-pwa";
 import svgr from "vite-plugin-svgr";
 import wasm from "vite-plugin-wasm";
 
@@ -120,6 +121,23 @@ export default defineConfig({
 		i18nextLoader({
 			paths: ["./locales"],
 			namespaceResolution: "basename",
+		}),
+		VitePWA({
+			registerType: 'autoUpdate',
+			includeAssets: ['player.png', 'ffmpeg.wasm'],
+			manifest: {
+				name: 'AMLL Player',
+				short_name: 'AMLL Player',
+				description: 'Apple Music Like Lyrics Player',
+				theme_color: '#ffffff',
+				icons: [
+					{
+						src: 'player.png',
+						sizes: '512x512',
+						type: 'image/png'
+					}
+				]
+			}
 		}),
 	],
 	resolve: {
