@@ -218,10 +218,6 @@ export const Component: FC = () => {
 			const metingApiUrl = `${resolvedApiUrl}${separator}server=${metingServer}&type=song&id=${metingMusicId.trim()}&r=${Date.now()}`;
 			const response = await fetch(metingApiUrl, {
 				cache: "no-store",
-				headers: {
-					"Cache-Control": "no-cache",
-					Pragma: "no-cache",
-				},
 			});
 			if (!response.ok) {
 				throw new Error(`请求失败: ${response.status}`);
@@ -311,10 +307,6 @@ export const Component: FC = () => {
 				console.log("即将请求 API:", metingApiUrl);
 				const response = await fetch(metingApiUrl, {
 					cache: "no-store",
-					headers: {
-						"Cache-Control": "no-cache",
-						Pragma: "no-cache",
-					},
 				});
 				console.log(`获取到 API 响应: 状态码 ${response.status}`, response);
 				if (!response.ok) {
